@@ -20,13 +20,14 @@ let rec find (x : 'a pointRef) : 'a pointRef =
   | Root _ -> x
   | Link ({ parent = y } as link) ->
       let z = find y in
-      if z != y then link.parent <- z;
+      link.parent <- z;
       z
 
 (* equiv: check if [x] and [y] are the same equivalence class *)
 let equiv (x : 'a pointRef) (y : 'a pointRef) : bool =
-  x == y || find x == find y
+  find x == find y
 
+(* TODO: check if this is needed *)
 (* isRepr: check if vertex is the representative element of the equivalence class *)
 let isRepr (x : 'a pointRef) : bool =
   match !x with Root _ -> true | _ -> false
