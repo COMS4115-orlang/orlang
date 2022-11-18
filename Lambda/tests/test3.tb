@@ -1,0 +1,15 @@
+(* booleans, and, or, not, if statement *)
+
+val f: 'a -> 'a
+let f = (\x -> x)
+
+let x = true
+let tru = f (x || false)
+let fls = f (x && (! true))
+let main = if tru 
+           then
+              if fls 
+              then 0
+              else 1
+           else 0
+

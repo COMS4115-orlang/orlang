@@ -1,0 +1,21 @@
+(* Let polymorphism; recursive let bindings used polymorphically
+   outside of their definition and monomorphically inside of their
+   definition; redundant recursion *)
+
+val fac : Int -> Int
+let rec fac n = 
+  if n == 0 then 0
+  else if n == 1 then 1
+  else (fac (n - 1)) + (fac (n - 2))
+
+val x : Int
+let x = 20
+
+val id : 'a -> 'a
+let rec id = (\x -> x)
+
+val applyFunc: ('b -> 'c) -> 'b -> 'c
+let rec applyFunc f x = f x
+
+let main = applyFunc (applyFunc id fac) (applyFunc id x)
+

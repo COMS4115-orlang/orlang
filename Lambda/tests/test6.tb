@@ -1,0 +1,3 @@
+(* unification error: cannot apply an argument to an int *)
+
+let main = 1 2
