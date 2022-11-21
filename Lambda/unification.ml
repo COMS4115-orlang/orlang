@@ -6,8 +6,10 @@ type typeEnvironm = scheme M.t
 type evalResult = 
   { code: string;
     tp  : typ;
+    sexpr : sExpr;
     sub : substitution;
   }
+
 
 (* apply a substitution to a type *)
 let rec apply (sub : substitution) (tp : typ) : typ = 

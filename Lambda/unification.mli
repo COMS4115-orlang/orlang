@@ -5,6 +5,7 @@ type typeEnvironm = scheme Map.Make(String).t
 type evalResult = 
   { code: string;
     tp  : typ;
+    sexpr: sExpr;
     sub : substitution;
   }
 
