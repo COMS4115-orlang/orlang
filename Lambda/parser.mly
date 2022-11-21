@@ -120,12 +120,25 @@ expr:
 | expr DOUBLEEQUALS expr      { NoHint(Call(NoHint(Call(NoHint(Var "operator_eq") , $1)), $3)) }
 | BNOT expr                   { NoHint(Call(NoHint(Var "operator_not"), $2)) }
 | IF expr THEN expr ELSE expr { NoHint(If($2, $4, $6)) }
-| MATCH expr WITH guards SEMICOLON { (*TODO*) NoHint(IntLit(0)) }
+| MATCH expr WITH patternMatrix SEMICOLON { NoHint(PatternMatch($2, $4)) }
 | LBRACKET lst RBRACKET       { (*TODO*) NoHint(IntLit(0)) }
 
 lst:
 | expr                        { (*TODO*) NoHint(IntLit(0)) }
 | expr COMMA lst              { (*TODO*) NoHint(IntLit(0)) }
+
+exprList:
+| expr                { [$1] }
+| expr COMMA exprList { ($1)::($3) }
+
+patternMatrix: 
+| GUARD pattern EQUALS expr               { [PatternRow($2, $4)] }
+| GUARD pattern EQUALS expr patternMatrix { PatternRow($2, $4)::($5) }
+
+pattern:
+| LITERAL      { PatLit($1) }
+| VARIABLE     { PatId($1) }
+| VARIABLE exprList { PatCon($1, $2) }
 
 guards:
 | guard                       { (*TODO*) NoHint(IntLit(0)) }
