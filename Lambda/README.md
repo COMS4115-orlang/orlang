@@ -115,7 +115,7 @@ Everyone participated in formally defining our language (and thus our AST, scann
 
 ## 7. Test Cases
 We give a high-level description of the test-cases we wrote.
-- `test1.orl`: Monomorphism; non-recursive let bindings; lambdas; multi-variable lambdas; nested comments; function application; currying; where clause desugaring
+- `test1.orl`: Monomorphism; non-recursive let bindings; lambdas; multi-variable lambdas; nested comments; function application; currying; `where` clause desugaring
 
 - `test2.orl`: Monomorphism; non-recursive let bindings
 
