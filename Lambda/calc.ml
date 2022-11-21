@@ -203,9 +203,8 @@ let rec eval (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
               }
           )
 (*---------------------------------------------------------------------------*)  
-| NoHint(Let (Binding(_, _, true), _)) | Hint(Let (Binding(_, _, true), _), _) ->
+  | NoHint(Let (Binding(LVar(v), e, _), f))  ->
         (* recursive let-bindings *)
-
         (* use of the recursive let-binding must be monomorphic in its
            definition and can be polymorphic outside of its definition;
            apparently, this is a constraint imposed by HM inference.
@@ -217,10 +216,7 @@ let rec eval (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
            function body, then make it refer to itself, then call the
            function application *)
 
-        let (v, e, f, vTyp) = match expr with
-          | NoHint(Let (Binding(LVar(v), e, _), f)) -> (v, e, f, nextTypVar last)
-          | Hint(Let (Binding(LVar(v), e, _), f), t) -> (v, e, f, t)
-        in
+        let vTyp = nextTypVar last in
         
         (* add the type hint for v to the type environment (or a new
            type variable in case no hint is given *)
@@ -270,6 +266,72 @@ let rec eval (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
               sub = compose sub sub3;
             }
         )
+
+(*  | Hint(Let (Binding(_, _, true), _), _) -> *)
+  | Hint(Let (Binding(LVar(v), e, _), f), t) ->
+        (* recursive let-bindings *)
+
+        (* use of the recursive let-binding must be monomorphic in its
+           definition and can be polymorphic outside of its definition;
+           apparently, this is a constraint imposed by HM inference.
+
+           for recursive let-bindings, we cannot use the regular
+           function application as in the non-recursive case - because
+           the body of the function expects the function itself as an
+           argument; for this reason, we need to first instantiate the
+           function body, then make it refer to itself, then call the
+           function application *)
+        let vTyp = t in
+        
+        (* add the type hint for v to the type environment (or a new
+           type variable in case no hint is given *)
+        let typEnvNew = M.add v (Scheme([], vTyp)) typEnv in
+
+        (* evaluate the assigned type, unify it with the potential type hint,
+           then generalize the unified type; it is important to generalize
+           AFTER the unification since type hints are monomorphic *)
+        let { code = codee; tp = assnTyp; sub = sub1; } = eval e typEnvNew in
+        let typEnvNew = applyte sub1 typEnv in
+        let (vTypUni, sub2) = unification (apply sub1 vTyp) assnTyp in
+        let vTypGen = generalize vTypUni typEnvNew v in
+        
+        (* add the unified polymorphic type for v to the map and
+           apply the substitutions obtained during the previous process;
+           finally determine the type of the resulting expression *)
+        let typEnvNew = M.add v vTypGen typEnv in
+        let sub = compose sub1 sub2 in
+        let typEnvNew = applyte sub typEnvNew in
+        let { code = codef; tp = retTyp; sub = sub3; } = eval f typEnvNew in
+
+        (* check that the resulting polymorphic type of v is an arrow type
+           and discard the rec qualifier applied to non-arrow types; this
+           is a useful shortcut since non-arrow types are not instance of
+           some class but arbitrary pointers (e.g. Int/Bool), and making them
+           recursive would require a more involved translation process *)
+        let Scheme(_, arrowTyp) = vTypGen in
+        let _ = match arrowTyp with
+                  | ArrowTyp(_, _) -> ()
+                  | _ -> raise(Failure("rec qualifier can only be used on functions"))
+        in
+        
+        (* special code generation for recursive let-bindings *)
+        let name = nextEntry lastClass in
+        let capture = (remove "main" 
+                      (remove (checkVar v) 
+                      (M.fold (fun k _ acc -> k :: acc) typEnv []))) in
+        let acapture = sep ", env->" capture in
+        let func = cppfunctioninst name v typEnv in
+        (
+            (* C code is equivalent to lambda and call *)
+            classes := !classes ^ 
+                       cppfunction name v codef typEnv ^
+                       fix name v typEnv codee;
+            { code = mangleApp name ^ "(" ^ func ^ ", env->" ^ acapture ^ ")";
+              tp = retTyp;
+              sub = compose sub sub3;
+            }
+        )
+
 
 let buildPrimitiveEnv : typeEnvironm = 
   let m = M.empty in
