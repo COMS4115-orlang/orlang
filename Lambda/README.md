@@ -109,9 +109,9 @@ Everyone participated in formally defining our language (and thus our AST, scann
 
 - Christopher: Wrote scanner and implemented semantic checking based on Andrei's type system work. Wrote initial unification and union-find module with Chris which was deprecated (we decided to use Andrei's implemention of substituion-based unification and HM type system). Implenting support for pattern matching, as well as pattern matching anomaly detection. Did refactoring to integrate teammates' work.
 
-- Eumin (Manager): Writing testcases for Orlang. Wrote initial unification and union-find module with Chris which was deprecated (we decided to use Andrei's implemention of substituion-based unification and HM type system). Discovery work on ADTs and List & Tuple desugaring. Wrote testcases for orlang. 
+- Eumin: Writing testcases for Orlang. Wrote initial unification and union-find module with Chris which was deprecated (we decided to use Andrei's implemention of substituion-based unification and HM type system). Discovery work on ADTs and List & Tuple desugaring. Wrote testcases for orlang. 
 
-- Scott and Alan (System Architects): Working on a draft implementation of bidrectional message queues (via unix domain sockets) as a runtime C library. Discovery work on incorporating thread-based parallelism in the LLVM setting and the actor-model for message passing concurrency. Wrote testcases for orlang. 
+- Scott and Alan: Working on a draft implementation of bidrectional message queues (via unix domain sockets) as a runtime C library. Discovery work on incorporating thread-based parallelism in the LLVM setting and the actor-model for message passing concurrency. Wrote testcases for orlang. 
 
 ## 7. Test Cases
 We give a high-level description of the test-cases we wrote.
