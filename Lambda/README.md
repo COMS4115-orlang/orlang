@@ -34,7 +34,7 @@ You can either `cat tests/test{n}.out.c` or compile it with `gcc` and then run t
 
 ## 3. Features Implemented
 Below are some noteworthy features we have implemented so far:
-- **Lambdas**: We support lambdas (anonymous functions):
+- **Lambdas**: We support single/multi-variable lambda expressions (anonymous functions):
   ```
   let five =
     let f = (\x y -> 1 * (x - 2) * y) in 
@@ -44,10 +44,21 @@ Below are some noteworthy features we have implemented so far:
     f (g x 2 - 3) ((\z -> z + 1) y)
   ```
 
-- **Type System**: We have implemented a very basic Hindly-Milner type system via Algorithm W. We can infer
-  types and check for type errors. Do support this, we have also implemented a `unification` module.
+- **Type System**: We have implemented a variant of the Hindly-Milner type system via Algorithm W. We can infer
+  types and check for type errors at compilation time. To support this, we have implemented a `unification` module. 
+  In particular, our implementation obeys the limitation of HM that polymorphism can only be introduced via `let` 
+  bindings (i.e. let polymorphism), with every other construct - lambdas, most importantly - being monomorphic. Additionally, 
+  a name introduced recursively via let polymorphism must be used monomorphically within its definition, with polymorphism allowed only
+  afterwards.
 
-- **Type Annotations**: We support type annotations, which is incorporated into our HM type system.
+- **Type Annotations**: We support type annotations, which are incorporated into our HM type system. Our type annotation
+  mechansim is slightly different from OCaml/Haskell in the following ways: (a) we allow annotation of top-level let-bindings 
+  via the `val` keywords and annotation of expressions via the `:` operator (whose precedence is defined in our parser) - see example below; in
+  particular, Orlang does not allow the inline type annotation of names introduced via `let` (e.g. `let x : int = ...` is not allowed) 
+  (b) all type annotations are monomorphic, and are maximally generalized in the context of let-bindings; this means that, in the context of
+  let-bindings, type annotations assume maximal polymorphism, whereas, in any other case, they remain monomorphic (c) any type annotation is
+  valid as long as it can be unified with its inferred type, even if it is more general than the most general unifier.
+
   ```
   val add : Int -> Int -> Int
   let add x y = (x : Int) + (y : Int)
@@ -56,7 +67,8 @@ Below are some noteworthy features we have implemented so far:
   let subtract x y = x - y : Int
   ```
 
-- **Recursion**: We support recursive functions:
+- **Recursion**: We support the definition of  recursive functions via `let rec`. For the sake of clarity and correcness, we explicitly disallow
+  variables of a non-arrow type from being defined recursively.
   ```
   val fac : Int -> Int
   let rec fac n = 
@@ -77,8 +89,12 @@ Below are some noteworthy features we have implemented so far:
     | _ = 0;
   ```
 
-- **Very rough C codegen**: We can generate `C` code from Orlang. This is just for a placeholder, and we assume
-it will help us transition into LLVM land as we begin implementing the backend.
+- **Very rough C codegen**: We can generate pure `C` code from Orlang. This is just a placeholder and will soon be replaced. We assume
+this step will help us transition to LLVM IR as we begin implementing the backend. The most important decisions so far are that (a)
+all variables/functions in Orlang will be represented as untyped pointers (void*), which are casted depending on the context they are used in;
+the Type Checking mechanism guarantees that such casts are valid (b) implementation of lambda expressions is similar to how they are handled
+in C++ (each lambda is an instance of a unique class, which contains its capture and a call operator - in pure C, a function pointer). Our C
+translation was designed to support Currying, hence the increase in generated code size.
 
 
 ## 4. Features in progress or to be implemented
