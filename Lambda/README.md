@@ -44,7 +44,7 @@ Below are some noteworthy features we have implemented so far:
     f (g x 2 - 3) ((\z -> z + 1) y)
   ```
 
-- **Type System**: We have implemented a variant of the Hindly-Milner type system via Algorithm W. We can infer
+- **Type System**: We have implemented a variant of the Hindley-Milner type system via Algorithm W. We can infer
   types and check for type errors at compilation time. To support this, we have implemented a `unification` module. 
   In particular, our implementation obeys the limitation of HM that polymorphism can only be introduced via `let` 
   bindings (i.e. let polymorphism), with every other construct - lambdas, most importantly - being monomorphic. Additionally, 
@@ -121,7 +121,7 @@ We have made no significant changes to our LRM. Included in the submission is ou
 ## 6. Breakdown of Contributions
 Everyone participated in formally defining our language (and thus our AST, scanner, parser); high-level discussions to solidfy our language featuers; and our approaches to implementing them. 
 
-- Andrei: Implemented bulk of the parser. Implemented our unification module and Algorithm W for our Hindly Milner Type System; Implemented support for type annotations; Implemented the `C` codegen to translate Orlang to `C`. Writing testcases for Orlang. 
+- Andrei: Implemented bulk of the parser. Implemented our unification module and Algorithm W for our Hindley Milner Type System; Implemented support for type annotations; Implemented the `C` codegen to translate Orlang to `C`. Writing testcases for Orlang. 
 
 - Christopher: Wrote scanner and implemented semantic checking based on Andrei's type system work. Wrote initial unification and union-find module with Eumin which was deprecated (we decided to use Andrei's implemention of substituion-based unification and HM type system). Implenting support for pattern matching, as well as pattern matching anomaly detection. Did refactoring to integrate teammates' work.
 
