@@ -107,7 +107,7 @@ Everyone participated in formally defining our language (and thus our AST, scann
 
 - Andrei: Implemented bulk of the parser. Implemented our unification module and Algorithm W for our Hindly Milner Type System; Implemented support for type annotations; Implemented the `C` codegen to translate Orlang to `C`. Writing testcases for Orlang. 
 
-- Christopher: Wrote scanner and implemented semantic checking based on Andrei's type system work. Wrote initial unification and union-find module with Chris which was deprecated (we decided to use Andrei's implemention of substituion-based unification and HM type system). Implenting support for pattern matching, as well as pattern matching anomaly detection. Did refactoring to integrate teammates' work.
+- Christopher: Wrote scanner and implemented semantic checking based on Andrei's type system work. Wrote initial unification and union-find module with Eumin which was deprecated (we decided to use Andrei's implemention of substituion-based unification and HM type system). Implenting support for pattern matching, as well as pattern matching anomaly detection. Did refactoring to integrate teammates' work.
 
 - Eumin: Writing testcases for Orlang. Wrote initial unification and union-find module with Chris which was deprecated (we decided to use Andrei's implemention of substituion-based unification and HM type system). Discovery work on ADTs and List & Tuple desugaring. Wrote testcases for orlang. 
 
