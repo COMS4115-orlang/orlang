@@ -94,11 +94,12 @@ Below are some noteworthy features we have implemented so far:
   ```
   Not that, unlike `OCaml`, all branches must start with a guard (vertical bar `|`).
  
-- **Very rough C codegen**: We can generate pure `C` code from Orlang. This is just a placeholder and will soon be replaced. We assume
-this step will help us transition to LLVM IR as we begin implementing the backend. The most important decisions so far are that (a)
-all variables/functions in Orlang will be represented as untyped pointers (void*), which are casted depending on the context they are used in;
-the Type Checking mechanism guarantees that such casts are valid (b) implementation of lambda expressions is similar to how they are handled
-in C++ (each lambda is an instance of a unique class, which contains its capture and a call operator - in pure C, a function pointer). Our C
+- **Very rough C codegen**: We can generate pure `C` code from Orlang. This is just a placeholder and will soon be replaced. Although now it happens
+in the semantic `check`ing function, we assume this step will help us transition to LLVM IR as we begin implementing the backend.
+The most important decisions so far are that (a) all variables/functions in Orlang will be represented as untyped pointers (void*), 
+which are casted depending on the context they are used in; the Type Checking mechanism guarantees that such casts are valid 
+(b) implementation of lambda expressions is similar to how they are handled in C++ 
+(each lambda is an instance of a unique class, which contains its capture and a call operator - in pure C, a function pointer). Our C
 translation was designed to support Currying, hence the increase in generated code size.
 
 
