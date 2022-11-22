@@ -88,7 +88,8 @@ Below are some noteworthy features we have implemented so far:
     | 0 = 1
     | _ = 0;
   ```
-
+  Not that, unlike `OCaml`, all branches must start with a guard (vertical bar `|`).
+ 
 - **Very rough C codegen**: We can generate pure `C` code from Orlang. This is just a placeholder and will soon be replaced. We assume
 this step will help us transition to LLVM IR as we begin implementing the backend. The most important decisions so far are that (a)
 all variables/functions in Orlang will be represented as untyped pointers (void*), which are casted depending on the context they are used in;
