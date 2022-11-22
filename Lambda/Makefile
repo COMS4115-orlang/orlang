@@ -1,9 +1,8 @@
-.PHONY : build
 build:
 	ocamlbuild orlang.native
 
-.PHONY : tests
-tests: build
+.PHONY : all_tests
+all_tests: build
 	-./test.sh 1
 	-./test.sh 2
 	-./test.sh 3
