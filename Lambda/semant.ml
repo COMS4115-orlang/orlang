@@ -4,6 +4,7 @@ open Instantiation
 open Cpp
 module M = Map.Make(String)
 module S = Set.Make(String)
+module L = Llvm
 
 let classes = ref ""
 

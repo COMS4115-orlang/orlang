@@ -14,6 +14,11 @@ Update: 11/21/2022 (Mid-term project Hello-World Submission)
 - `tests/`: Testcases for Orlang
 
 ## 2. Running Orlang on tests
+Preparation 
+```
+$ sudo apt-get install ocaml-findlib
+$ opam install llvm
+```
 First, build orlang via
 ```
 $ ocamlbuild orlang.native > orlang

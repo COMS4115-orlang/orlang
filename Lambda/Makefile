@@ -1,5 +1,5 @@
 build:
-	ocamlbuild orlang.native
+	ocamlbuild -pkgs llvm orlang.native
 
 .PHONY : all_tests
 all_tests: build
