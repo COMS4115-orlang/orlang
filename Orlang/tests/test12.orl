@@ -1,0 +1,8 @@
+(* unification error: if condition must be bool *)
+
+let x = 3
+let y = 
+  (\z ->
+   \t -> if x
+        then 1
+        else 0 + 2) 0 0

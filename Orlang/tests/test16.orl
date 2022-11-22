@@ -1,0 +1,5 @@
+(* rec cannot be used on non-functions *)
+
+let rec x = 1
+
+let main = x

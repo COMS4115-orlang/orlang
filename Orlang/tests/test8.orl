@@ -1,0 +1,3 @@
+(* undefined variable *)
+
+let main = x

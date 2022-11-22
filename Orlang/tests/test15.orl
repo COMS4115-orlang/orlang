@@ -1,0 +1,5 @@
+(* unification error: fac must be used monomorphically in def *)
+
+let rec fac n = fac (n - 1) + (fac false)
+
+let main = 1
