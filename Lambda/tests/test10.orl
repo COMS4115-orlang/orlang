@@ -1,5 +1,5 @@
 let random x y =
   match x with
-    5 = [3]
+  | 5 = [3]
   | 3 = [4, 5, 6];
 

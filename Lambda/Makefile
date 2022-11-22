@@ -5,7 +5,6 @@ build:
 .PHONY : test
 test:
 	./orlang.native < tests/test$(n).orl > tests/test$(n).out.c
-	# fix 6 and 10
 
 ##############################
 
