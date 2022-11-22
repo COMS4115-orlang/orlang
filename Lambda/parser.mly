@@ -140,13 +140,6 @@ pattern:
 | VARIABLE     { PatId($1) }
 | VARIABLE exprList { PatCon($1, $2) }
 
-guards:
-| guard                       { (*TODO*) NoHint(IntLit(0)) }
-| guards GUARD guard          { (*TODO*) NoHint(IntLit(0)) }
-
-guard:
-| expr EQUALS expr            { (*TODO*) NoHint(IntLit(0)) }
-
 lambda:
 | VARIABLE ARROW expr         { NoHint(Lambda(LVar($1), $3)) }
 | VARIABLE lambda             { NoHint(Lambda(LVar($1), $2)) }
