@@ -25,8 +25,8 @@ in the root directory. Then, run
 ```
 $ orlang < tests/test{n}.orl > tests/test{n}.out.c
 
-# to run this for ALL testcases,
-$ make test
+# alternatively... (replace 1 below with any test case number)
+$ make n=1 test
 ```
 where `n` is the testcase number.
 
