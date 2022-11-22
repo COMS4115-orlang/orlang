@@ -1,5 +1,0 @@
-(* unification error: id : int-> int cannot be called with bol *)
-
-let id x = (x : Int)
-
-let main = id true

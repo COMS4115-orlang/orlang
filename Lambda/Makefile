@@ -16,9 +16,13 @@ tests:
 	./orlang < tests/test14.tb > tests/test14.out.c
 	./orlang < tests/test15.tb > tests/test15.out.c
 	./orlang < tests/test16.tb > tests/test16.out.c
+	./orlang < tests/test17.tb > tests/test17.out.c
+	#./orlang < tests/test7.tb > tests/test7.out.c
+	#./orlang < tests/test10.tb > tests/test10.out.c
+
 
 ##############################
 
 .PHONY : clean
 clean :
-	rm -rf orlang.native *.cmi *.cmo parser.ml parser.mli scanner.ml orlang tests/*.c tests/a.out parser.output
+	rm -rf orlang.native *.cmi *.cmo parser.ml parser.mli scanner.ml orlang tests/*.c tests/a.out parser.output _build *.c *.out

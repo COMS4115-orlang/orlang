@@ -6,8 +6,6 @@ open Semant
 module M = Map.Make(String)
 module S = Set.Make(String)
 
-let classes = ref ""
-
 let buildPrimitiveEnv : typeEnvironm = 
   let m = M.empty in
   let commonInttp = ArrowTyp(Concrete "Int", ArrowTyp(Concrete "Int", Concrete "Int")) in
