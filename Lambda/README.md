@@ -27,6 +27,9 @@ $ orlang.native < tests/test{n}.orl > tests/test{n}.out.c
 
 # alternatively... (replace 1 below with any test case number)
 $ make n=1 test
+
+# to run all testcases,
+$ make all_tests
 ```
 where `n` is the testcase number.
 
