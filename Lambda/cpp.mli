@@ -1,4 +1,7 @@
 open Unification
+module L = Llvm
+
+val the_module : L.llmodule
 
 (* All but the last element of a list *)
 val init : 'a list -> 'a list

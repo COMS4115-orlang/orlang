@@ -63,5 +63,5 @@ let _ =
         \t((struct operator_if_cls*) env->operator_if)->call = &operator_if_call;\n\
         \tprintf(\"%lld\\n\", ((long long)" ^ result ^ "));\n\
         \treturn 0;\n\
-    }")
-
+    }");
+    print_string ("/*" ^ Llvm.string_of_llmodule the_module ^ "*/")

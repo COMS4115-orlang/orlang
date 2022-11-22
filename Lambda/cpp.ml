@@ -1,5 +1,12 @@
 open Unification
 module M = Map.Make(String)
+module L = Llvm
+
+let context    = L.global_context()
+let the_module = L.create_module context "Orlang"
+let i8_t       = L.i8_type context
+let i32_t      = L.i32_type context
+let voidptr    = L.pointer_type i8_t
 
 (* All but the last element of a list *)
 let rec init : 'a list -> 'a list = function
@@ -144,6 +151,29 @@ void* operator_if_init(){\n\
 
 (* function that performs function application *)
 let applyFunc : string = 
+    (* get llvm function type void* (void* , void* ) *)
+    let ftyp = L.function_type voidptr (Array.of_list [voidptr; voidptr]) in
+    (* create function named "apply" with type above *)
+    let func = L.define_function "apply" ftyp the_module in
+    (* begin writing the function *)
+    let builder = L.builder_at_end context (L.entry_block func) in
+    
+    let add_formal ((t, n), p) =
+        (* bind the parameter to a name *)
+        L.set_value_name n p;
+        (* allocate space for the parameter on the stack *)
+        let local = L.build_alloca t n builder in
+        (* store parameter value on the stack *)
+        ignore (L.build_store p local builder);
+    in 
+    List.iter add_formal (List.combine [(voidptr, "f"); (voidptr, "arg")] 
+                                       (Array.to_list (L.params func)));
+    (* pointer to pointer to function *)
+    let funcptrptr = L.pointer_type (L.pointer_type ftyp) in
+    (* TODO: cast f to funcptrptr and call it *)
+    (* TODO: this is a placeholder for the return statement *)
+    ignore(L.build_ret (L.const_int i32_t 0) builder);
+
     "void* apply(void* f, void* arg){\n\
          \treturn (**((void* (**)(void*, void*)) f))(f, arg);\n\
      }\n"
