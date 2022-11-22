@@ -8,7 +8,7 @@ Update: 11/21/2022 (Mid-term project Hello-World Submission)
 - `parser.mly`: Orlang's Parser
 - `semant.ml`: Orlang's semantic checking. Currently checks for type errors (via Algorithm W) and unused variables
 - `unification.ml`: Unification module used in Algorithm W
-- `instantiation.ml`: 
+- `instantiation.ml`: initialization/generalization methods for Hindly Milner type inference
 - `cgen.ml`: Orlang's (very rough) codegen subroutines for generating C code from Orlang.
 - `Makefile`: For your convenience when running tests
 - `tests/`: Testcases for Orlang
