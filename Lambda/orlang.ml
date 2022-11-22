@@ -61,7 +61,7 @@ let _ =
         \t((struct operator_eq_cls*) env->operator_eq)->call = &operator_eq_call;\n\
         \tenv->operator_if = malloc(sizeof(struct operator_if_cls));\n\
         \t((struct operator_if_cls*) env->operator_if)->call = &operator_if_call;\n\
-        \tprintf(\"%lld\", ((long long)" ^ result ^ "));\n\
+        \tprintf(\"%lld\\n\", ((long long)" ^ result ^ "));\n\
         \treturn 0;\n\
     }")
 
