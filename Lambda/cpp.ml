@@ -7,7 +7,9 @@ let context    = L.global_context()
 let the_module = L.create_module context "Orlang"
 let i8_t       = L.i8_type context
 let i32_t      = L.i32_type context
+let i64_t      = L.i64_type context
 let voidptr    = L.pointer_type i8_t
+let voidptrptr = L.pointer_type voidptr
 
 let ftypUnr    = L.function_type voidptr (Array.of_list [voidptr; voidptr])
 let ftypBin    = L.function_type voidptr (Array.of_list [voidptr; voidptr])
@@ -161,11 +163,11 @@ let llvmFuncDef (name : string) (args : string list) =
     let paramList = 
         List.map add_formal (List.combine args
                                 (Array.to_list (L.params func))) in
-    (builder, paramList)
+    (func, builder, paramList)
 
 (* function that performs function application *)
 let applyFunc : string = 
-    let (builder, f :: arg :: []) = 
+    let (_, builder, f :: arg :: []) = 
         llvmFuncDef "apply" ["f"; "arg"] in
 
     (* load ptrptr f *)
@@ -263,9 +265,7 @@ let cppfunction (name : string) (arg : string)
                     "\t*((void**) reserved + " ^ (string_of_int !currIndex) ^ 
                     ") = " ^ v ^ ";\n")) capture) in
 
-
-    let ftyp    = L.function_type voidptr (Array.of_list [voidptr; voidptr]) in 
-    let funcptr = L.pointer_type ftyp in
+    (* define the structure associated with this function *)
     let structT = L.named_struct_type context ("struct." ^ mangleName name) in
     let strptrT = L.pointer_type structT in
     let _ = L.struct_set_body structT
@@ -273,10 +273,58 @@ let cppfunction (name : string) (arg : string)
                              (Array.of_list [funcptr]) 
                              (Array.make (List.length capture) voidptr))
                          false in
+
+    (* define the call function and allocate space for params *)
+    let (fn_call, builder, params) = llvmFuncDef (mangleCall name) ["genenv"; "arg"] in
+
+    (* TODO: insert call body *)
+
+    (* define the init function and allocate space for params *)
+    let (fn_init, builder, params) = llvmFuncDef (mangleInit name) (remove arg capture) in
     
-    let (builder, params) = llvmFuncDef (mangleInit name) (remove arg capture) in
+    (* malloc structure and cast it *)
+    let allocd_struct = L.build_alloca strptrT "reserved" builder in
+    let space = L.build_malloc structT "space" builder in
+    let _ = L.build_store space allocd_struct builder in
+
+    (* store pointer to call in struct *)
+    let struct_load = L.build_load allocd_struct "struct_load" builder in
+    let struct_cast = L.build_bitcast struct_load funcptrptr "struct_cast" builder in
+    let _ = L.build_store fn_call struct_cast builder in
+
+    (* store function arguments into structure *)
+    let currIndex = ref 0 in
+    let currParam = ref params in
+    let _ = (List.iter 
+                (fun v ->
+                    currIndex := !currIndex + 1;
+                    if v = arg 
+                    then ()
+                    else
+                        let (p :: ps) = !currParam in
+                        (* load the argument value *)
+                        let argval = L.build_load p "argval" builder in
+                        (* load the structure *)
+                        let struct_load = L.build_load allocd_struct 
+                                                       "struct_load" builder in
+                        (* cast structure to void** *)
+                        let struct_cast = L.build_bitcast struct_load 
+                                                          voidptrptr "struct_cast" builder in
+                        (* get reference to argument position in the structure *)
+                        let elem_ptr    = L.build_in_bounds_gep struct_cast 
+                                                          [|(L.const_int i64_t !currIndex)|]
+                                                          "elem_ptr" builder in
+                        (* store the value *)
+                        let _ = L.build_store argval elem_ptr builder in
+                        currParam := ps;
+                )
+                capture) in
+
+    (* load structure, cast it to void*, return it *)
+    let struct_load = L.build_load allocd_struct "struct_load" builder in
+    let struct_cast = L.build_bitcast struct_load voidptr "struct_cast" builder in
+    ignore(L.build_ret struct_cast builder);
     
-    let local = L.build_alloca strptrT "reserved" builder in
 
     "struct " ^ (mangleName name) ^ "{\n\
          \tvoid* (*call)(void*, void*);\n\
