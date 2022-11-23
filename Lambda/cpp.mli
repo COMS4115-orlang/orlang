@@ -3,12 +3,6 @@ module L = Llvm
 
 val the_module : L.llmodule
 
-(* All but the last element of a list *)
-val init : 'a list -> 'a list
-
-(* last element of a list *)
-val lst : 'a list -> 'a
-
 (* Helpers *)
 
 (* inserts a separator between elements of a list and converts to string *)
@@ -35,25 +29,7 @@ val mangleEnv : string -> string
 (* the mangled name for the recursive function app *)
 val mangleApp : string -> string
 
-(* general C skeleton for a unary function *)
-val primitiveUnaryFunc : string -> string -> string
-
-(* general C skeleton for a binary function *)
-val primitiveBinaryFunc : string -> string -> string
-
-(* C code for the if statement *)
-val ifstatement : string
-
-(* function that performs function application *)
-val applyFunc : string
-
-(* struct corresponding to the initial state of the env *)
-val primitiveEnv : typeEnvironm -> string
-
 val buildPrimitiveEnv : (string * typeEnvironm)
-
-(* fixed includes and classes *)
-val prelude : typeEnvironm -> string
 
 (* generates the C code for a function;     
    acts essentially as a lambda function written in C: each function has a

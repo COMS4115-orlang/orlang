@@ -9,18 +9,6 @@ let i8_t       = L.i8_type context
 let i32_t      = L.i32_type context
 let voidptr    = L.pointer_type i8_t
 
-(* All but the last element of a list *)
-let rec init : 'a list -> 'a list = function
-  | [] -> []
-  | _ :: [] -> []
-  | x :: xs -> x :: (init xs)
-
-(* last element of a list *)
-let rec lst : 'a list -> 'a = function
-  | [] -> raise (Failure ("invalid call to last"))
-  | x :: [] -> x
-  | _ :: xs -> lst xs
-
 (* Helpers *)
 
 (* inserts a separator between elements of a list and converts to string *)
