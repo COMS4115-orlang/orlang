@@ -9,6 +9,11 @@ let i8_t       = L.i8_type context
 let i32_t      = L.i32_type context
 let voidptr    = L.pointer_type i8_t
 
+let ftypUnr    = L.function_type voidptr (Array.of_list [voidptr; voidptr])
+let ftypBin    = L.function_type voidptr (Array.of_list [voidptr; voidptr])
+let funcptr    = L.pointer_type ftypBin
+let funcptrptr = L.pointer_type funcptr
+
 (* Helpers *)
 
 (* inserts a separator between elements of a list and converts to string *)
@@ -136,30 +141,33 @@ void* operator_if_init(){\n\
 	\treturn (void*) reserved;\n\
 }\n"
 
-(* function that performs function application *)
-let applyFunc : string = 
-    (* get llvm function type void* (void* , void* ) *)
-    let ftyp = L.function_type voidptr (Array.of_list [voidptr; voidptr]) in
-    (* create function named "apply" with type above *)
-    let func = L.define_function "apply" ftyp the_module in
+let llvmFuncDef (name : string) (args : string list) = 
+    (* get llvm function type void* (void* , ...) *)
+    let ftyp = L.function_type voidptr (Array.of_list (List.map (fun _ -> voidptr) args)) in
+    (* create function with the above name and type *)
+    let func = L.define_function name ftyp the_module in
     (* begin writing the function *)
     let builder = L.builder_at_end context (L.entry_block func) in
-    
-    let add_formal ((t, n), p) =
+
+    let add_formal (n, p) =
         (* bind the parameter to a name *)
         L.set_value_name n p;
         (* allocate space for the parameter on the stack *)
-        let local = L.build_alloca t n builder in
+        let local = L.build_alloca voidptr n builder in
         (* store parameter value on the stack *)
         ignore (L.build_store p local builder);
         local
     in 
-    let f :: arg :: [] = 
-        List.map add_formal (List.combine [(voidptr, "f"); (voidptr, "arg")] 
-                                       (Array.to_list (L.params func))) in
-    (* pointer to pointer to function *)
-    let funcptr    = L.pointer_type ftyp in
-    let funcptrptr = L.pointer_type funcptr in
+    let paramList = 
+        List.map add_formal (List.combine args
+                                (Array.to_list (L.params func))) in
+    (builder, paramList)
+
+(* function that performs function application *)
+let applyFunc : string = 
+    let (builder, f :: arg :: []) = 
+        llvmFuncDef "apply" ["f"; "arg"] in
+
     (* load ptrptr f *)
     let f_load = L.build_load f "f_load" builder in 
     (* cast it to function ptr *)
@@ -254,6 +262,21 @@ let cppfunction (name : string) (arg : string)
                   else
                     "\t*((void**) reserved + " ^ (string_of_int !currIndex) ^ 
                     ") = " ^ v ^ ";\n")) capture) in
+
+
+    let ftyp    = L.function_type voidptr (Array.of_list [voidptr; voidptr]) in 
+    let funcptr = L.pointer_type ftyp in
+    let structT = L.named_struct_type context ("struct." ^ mangleName name) in
+    let strptrT = L.pointer_type structT in
+    let _ = L.struct_set_body structT
+                         (Array.append 
+                             (Array.of_list [funcptr]) 
+                             (Array.make (List.length capture) voidptr))
+                         false in
+    
+    let (builder, params) = llvmFuncDef (mangleInit name) (remove arg capture) in
+    
+    let local = L.build_alloca strptrT "reserved" builder in
 
     "struct " ^ (mangleName name) ^ "{\n\
          \tvoid* (*call)(void*, void*);\n\
