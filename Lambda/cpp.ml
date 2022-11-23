@@ -143,6 +143,7 @@ void* operator_if_init(){\n\
 	\treturn (void*) reserved;\n\
 }\n"
 
+(* Llvm builder for a function definition & space alloc for parameters *)
 let llvmFuncDef (name : string) (args : string list) = 
     (* get llvm function type void* (void* , ...) *)
     let ftyp = L.function_type voidptr (Array.of_list (List.map (fun _ -> voidptr) args)) in
@@ -164,6 +165,22 @@ let llvmFuncDef (name : string) (args : string list) =
         List.map add_formal (List.combine args
                                 (Array.to_list (L.params func))) in
     (func, builder, paramList)
+
+(* Llvm code for assigning a value to a member of a struct *)
+let llvmAssignMember allocd_struct p (currIndex : int) builder = 
+    (* load the argument value *)
+    let argval = L.build_load p "argval" builder in
+    (* load the structure *)
+    let struct_load = L.build_load allocd_struct "struct_load" builder in
+    (* cast structure to void** *)
+    let struct_cast = L.build_bitcast struct_load 
+    voidptrptr "struct_cast" builder in
+    (* get reference to argument position in the structure *)
+    let elem_ptr    = L.build_in_bounds_gep struct_cast 
+                                            [| L.const_int i64_t currIndex |]
+                                            "elem_ptr" builder in
+    (* store the value *)
+    ignore(L.build_store argval elem_ptr builder)
 
 (* function that performs function application *)
 let applyFunc : string = 
@@ -238,6 +255,7 @@ let buildPrimitiveEnv : (string * typeEnvironm) =
 
   (prelude mif, mif)
 
+
 (* generates the C code for a function;     
    acts essentially as a lambda function written in C: each function has a
    unique corresponding class with its call operator and its capture *)
@@ -302,20 +320,8 @@ let cppfunction (name : string) (arg : string)
                     then ()
                     else
                         let (p :: ps) = !currParam in
-                        (* load the argument value *)
-                        let argval = L.build_load p "argval" builder in
-                        (* load the structure *)
-                        let struct_load = L.build_load allocd_struct 
-                                                       "struct_load" builder in
-                        (* cast structure to void** *)
-                        let struct_cast = L.build_bitcast struct_load 
-                                                          voidptrptr "struct_cast" builder in
-                        (* get reference to argument position in the structure *)
-                        let elem_ptr    = L.build_in_bounds_gep struct_cast 
-                                                          [|(L.const_int i64_t !currIndex)|]
-                                                          "elem_ptr" builder in
-                        (* store the value *)
-                        let _ = L.build_store argval elem_ptr builder in
+                        (* assign the argument to the member of the struct *)
+                        let _ = llvmAssignMember allocd_struct p !currIndex builder in
                         currParam := ps;
                 )
                 capture) in
