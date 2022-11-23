@@ -1,4 +1,5 @@
 open Unification
+open Ast
 module M = Map.Make(String)
 module L = Llvm
 
@@ -21,8 +22,6 @@ let rec lst : 'a list -> 'a = function
   | _ :: xs -> lst xs
 
 (* Helpers *)
-let checkVar (s : string) : string = 
-    if s = "main" then "Main" else s
 
 (* inserts a separator between elements of a list and converts to string *)
 let rec sep (sym : string) : string list -> string = function
@@ -165,14 +164,25 @@ let applyFunc : string =
         let local = L.build_alloca t n builder in
         (* store parameter value on the stack *)
         ignore (L.build_store p local builder);
+        local
     in 
-    List.iter add_formal (List.combine [(voidptr, "f"); (voidptr, "arg")] 
-                                       (Array.to_list (L.params func)));
+    let f :: arg :: [] = 
+        List.map add_formal (List.combine [(voidptr, "f"); (voidptr, "arg")] 
+                                       (Array.to_list (L.params func))) in
     (* pointer to pointer to function *)
-    let funcptrptr = L.pointer_type (L.pointer_type ftyp) in
-    (* TODO: cast f to funcptrptr and call it *)
-    (* TODO: this is a placeholder for the return statement *)
-    ignore(L.build_ret (L.const_int i32_t 0) builder);
+    let funcptr    = L.pointer_type ftyp in
+    let funcptrptr = L.pointer_type funcptr in
+    (* load ptrptr f *)
+    let f_load = L.build_load f "f_load" builder in 
+    (* cast it to function ptr *)
+    let f_cast = L.build_bitcast f_load funcptrptr "f_cast" builder in
+    let f_fptr = L.build_load f_cast "f_fptr" builder in
+    (* load the arguments to be passed *)
+    let arg1   = L.build_load f "arg1" builder in
+    let arg2   = L.build_load arg "arg2" builder in
+    (* call function *)
+    let retval = L.build_call f_fptr (Array.of_list [arg1; arg2]) "retval" builder in
+    ignore(L.build_ret retval builder);
 
     "void* apply(void* f, void* arg){\n\
          \treturn (**((void* (**)(void*, void*)) f))(f, arg);\n\
@@ -210,57 +220,65 @@ let prelude : string =
    unique corresponding class with its call operator and its capture *)
 let cppfunction (name : string) (arg : string) 
                 (body : string) (typEnv : typeEnvironm) : string = 
-    let capture = (remove "main" 
-                  (remove (checkVar arg) 
-                  (M.fold (fun k _ acc -> k :: acc) typEnv []))) in
+    let dummyScheme = Scheme([], (Concrete "Int")) in
+    let capture = (M.fold (fun k _ acc -> k :: acc) 
+                   (M.add arg dummyScheme typEnv) 
+                   []) in
     let ccapture = sep ", *" capture in
-    let vcapture = sep ", void* " capture in
+    let vcapture = sep ", void* " (remove arg capture) in
+    let index = ref 0 in
     let assigns = 
             List.fold_left 
               (^) ""
-              (List.map (fun v -> "\treserved->" ^ v ^ " = " ^ v ^ ";\n") capture) in
+              (List.map (fun v -> (
+                  index := !index + 1;
+                  if v = arg then ""
+                  else
+                    "\t* ((void**) reserved + " ^ (string_of_int !index) ^ 
+                    ") = " ^ v ^ ";\n")) capture) in
 
     "struct " ^ (mangleName name) ^ "{\n\
          \tvoid* (*call)(void*, void*);\n\
-         \tvoid *" ^ ccapture ^ ", *" ^ (checkVar arg) ^ ";\n\
+         \tvoid *" ^ ccapture ^ ";\n\
      };\n\
-     void* " ^ (mangleCall name) ^ "(void* genenv, void* " ^ (checkVar arg) ^ "){\n\
+     void* " ^ (mangleCall name) ^ "(void* genenv, void* " ^ arg ^ "){\n\
          \tstruct " ^ (mangleName name) ^ 
                  " *env = (struct " ^ (mangleName name) ^ "*) genenv;\n\
-         \tenv->" ^ (checkVar arg) ^ " = " ^ (checkVar arg) ^ ";\n\
+         \tenv->" ^ arg ^ " = " ^ arg ^ ";\n\
          \treturn " ^ body ^ ";\n\
      }\n\
      void* " ^ (mangleInit name) ^ "(void* " ^ vcapture ^ "){\n\
         \tstruct " ^ (mangleName name) ^ "* reserved = \
             (struct " ^ (mangleName name) ^ "*)malloc(sizeof(*reserved));\n\
-        \treserved->call = &" ^ (mangleCall name) ^ ";\n" ^
+        \t*(void* (**) (void*, void*)) reserved = &" ^ (mangleCall name) ^ ";\n" ^
         assigns ^ 
         "\treturn (void*) reserved;\n\
      }\n"
 
 (* instantiate a class corresponding to a function *)
 let cppfunctioninst (name : string) (arg : string) (typEnv : typeEnvironm) : string = 
-     let capture = (remove "main" 
-                   (remove (checkVar arg) 
-                   (M.fold (fun k _ acc -> k :: acc) typEnv []))) in
+     let capture = (remove arg
+                   (M.fold (fun k _ acc -> k :: acc) typEnv [])) in
      let conscapture = sep ", env->" capture in
      (mangleInit name) ^ "(env->" ^ conscapture  ^ ")"
 
 (* similar to the fix operator: enables recursion *)
 let fix name arg typEnv codee = 
-     let capture = (remove "main" 
-                   (remove (checkVar arg) 
-                   (M.fold (fun k _ acc -> k :: acc) typEnv []))) in
+    let dummyScheme = Scheme([], (Concrete "Int")) in
+    let capture = (M.fold (fun k _ acc -> k :: acc) 
+                   (M.add arg dummyScheme typEnv) 
+                   []) in
      let ccapture = sep ", *" capture in
-     let vcapture = sep ", void *" capture in
+     let vcapture = sep ", void *" (remove arg capture) in
 
      let assigns = 
             List.fold_left 
               (^) ""
-              (List.map (fun v -> "\tenv->" ^ v ^ " = " ^ v ^ ";\n") capture) in
+              (List.map (fun v -> "\tenv->" ^ v ^ " = " ^ v ^ ";\n") 
+              (remove arg capture)) in
 
      "struct " ^ mangleEnv name ^ "{\n\
-          \tvoid *" ^ ccapture ^ ", *" ^ arg ^";\n\
+          \tvoid *" ^ ccapture ^ ";\n\
       };\n\
       void* " ^ mangleApp name ^ "(void* f, void *" ^ vcapture ^ "){\n\
           \tstruct " ^ mangleEnv name ^ "* env = malloc(sizeof(*env));\n"

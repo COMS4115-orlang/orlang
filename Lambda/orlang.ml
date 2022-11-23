@@ -27,8 +27,9 @@ let buildPrimitiveEnv : typeEnvironm =
                                                   ArrowTyp(ArrowTyp(Concrete "Int", TypVar "a"), 
                                                            TypVar "a")))))
                    meq in
-  let mmain = M.add "main" (Scheme([], Concrete "Int")) mif in
-  mmain
+  (*let mmain = M.add "main" (Scheme([], Concrete "Int")) mif in
+  mmain*)
+  mif
 
 let _ =
   let lexbuf = Lexing.from_channel stdin in

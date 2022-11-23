@@ -10,7 +10,6 @@ val init : 'a list -> 'a list
 val lst : 'a list -> 'a
 
 (* Helpers *)
-val checkVar : string -> string
 
 (* inserts a separator between elements of a list and converts to string *)
 val sep : string -> string list -> string

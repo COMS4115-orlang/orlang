@@ -13,6 +13,13 @@ let classes = ref ""
    composition is very likely slightly wrong; fixed in this code)
  *)
 
+let find x ys = 
+    let rec helper x index = function
+    |  []     -> raise(Failure("impossible"))
+    | y :: ys -> if x = y then index
+                          else helper x (index + 1) ys
+    in helper x 0 ys
+
 let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
   match expr with
   | NoHint(Var (s))             -> 
@@ -21,7 +28,9 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
           if M.mem s typEnv
           then
               let tp = instantiate (M.find s typEnv) in
-              { code  = "env->" ^ (checkVar s);
+              let ordered = (M.fold (fun k _ acc -> k :: acc) typEnv []) in
+              let index = find s ordered in
+              { code  = "(*((void**) env + 1 + " ^ string_of_int index ^ "))";
                 tp    = tp;
                 sexpr = (tp, SVar s); 
                 sub   = M.empty;
@@ -33,7 +42,7 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
           if M.mem s typEnv
           then
               let (tp, sub) = unification (instantiate (M.find s typEnv)) t in
-              { code  = "env->" ^ (checkVar s);
+              { code  = "env->" ^ s;
                 tp    = tp;
                 sexpr = (tp, SVar s);
                 sub   = sub;
@@ -270,7 +279,7 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
         (* special code generation for recursive let-bindings *)
         let name = nextEntry lastClass in
         let capture = (remove "main" 
-                      (remove (checkVar v) 
+                      (remove v 
                       (M.fold (fun k _ acc -> k :: acc) typEnv []))) in
         let acapture = sep ", env->" capture in
         let func = cppfunctioninst name v typEnv in
@@ -335,7 +344,7 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
         (* special code generation for recursive let-bindings *)
         let name = nextEntry lastClass in
         let capture = (remove "main" 
-                      (remove (checkVar v) 
+                      (remove v 
                       (M.fold (fun k _ acc -> k :: acc) typEnv []))) in
         let acapture = sep ", env->" capture in
         let func = cppfunctioninst name v typEnv in

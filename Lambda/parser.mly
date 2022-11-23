@@ -50,11 +50,11 @@ topLevel:
                                                     immediately followed by \
                                                     an accompanying definition"))
                               }
-| letBinding                  { NoHint(Let($1, NoHint(Var "main"))) }
+| letBinding                  { NoHint(Let($1, Hint(Var "main", Concrete "Int"))) }
 | typeAnn letBinding          { let (v1, tp) = $1 in
                                 let Binding(LVar(v2), _, _) = $2 in
                                 if v1 = v2 
-                                then Hint(Let($2, NoHint(Var "main")), tp)
+                                then Hint(Let($2, Hint(Var "main", Concrete "Int")), tp)
                                 else raise(Failure("type annotation must be \
                                                     immediately followed by \
                                                     an accompanying definition"))
