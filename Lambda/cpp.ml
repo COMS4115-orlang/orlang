@@ -189,21 +189,22 @@ let applyFunc : string =
      }\n"
 
 (* struct corresponding to the initial state of the env *)
-let primitiveEnv : string = 
+let primitiveEnv (typEnv : typeEnvironm) : string = 
+    let capture = (M.fold (fun k _ acc -> k :: acc) 
+                   typEnv
+                   []) in
+    let ccapture = sep ", *" capture in
     "struct primitiveEnv{ \n\
-         \t void *operator_add, *operator_sub, \
-                 *operator_mlt, *operator_div, \
-                 *operator_mod, *operator_and, \
-                 *operator_or , *operator_not, \
-                 *operator_if , *operator_eq;\n\
+         \t void* (*call) (void*, void*);\n\
+         \t void *" ^ ccapture ^ ";\n\
      };\n"
 
 (* fixed includes and classes *)
-let prelude : string = 
+let prelude (typEnv : typeEnvironm) : string = 
     "#include<stdio.h>\n\
      #include <stdlib.h>\n" ^
     applyFunc ^ 
-    primitiveEnv ^ 
+    (primitiveEnv typEnv) ^ 
     ifstatement ^ 
     (primitiveBinaryFunc "add" "+") ^ 
     (primitiveBinaryFunc "sub" "-") ^
@@ -214,6 +215,30 @@ let prelude : string =
     (primitiveBinaryFunc "or"  "|") ^
     (primitiveUnaryFunc  "not" "!") ^
     (primitiveBinaryFunc "eq"  "==")
+
+let buildPrimitiveEnv : (string * typeEnvironm) = 
+  let m = M.empty in
+  let commonInttp = ArrowTyp(Concrete "Int", ArrowTyp(Concrete "Int", Concrete "Int")) in
+  let commonBooltp = ArrowTyp(Concrete "Bool", ArrowTyp(Concrete "Bool", Concrete "Bool")) in
+  let commonGenerictp = ArrowTyp(TypVar "a", ArrowTyp(TypVar "a", Concrete "Bool")) in
+  let unaryBooltp = ArrowTyp(Concrete "Bool", Concrete "Bool") in
+  let madd = M.add "operator_add" (Scheme([], commonInttp)) m in
+  let msub = M.add "operator_sub" (Scheme([], commonInttp)) madd in
+  let mmlt = M.add "operator_mlt" (Scheme([], commonInttp)) msub in
+  let mdiv = M.add "operator_div" (Scheme([], commonInttp)) mmlt in
+  let mmod = M.add "operator_mod" (Scheme([], commonInttp)) mdiv in
+  let mand = M.add "operator_and" (Scheme([], commonBooltp)) mmod in
+  let mor  = M.add "operator_or"  (Scheme([], commonBooltp)) mand in
+  let mnot = M.add "operator_not" (Scheme([], unaryBooltp)) mor in
+  let meq  = M.add "operator_eq"  (Scheme([], commonGenerictp)) mnot in
+  let mif  = M.add "operator_if"  
+                   (Scheme(["a"], ArrowTyp(Concrete "Bool",
+                                         ArrowTyp(ArrowTyp(Concrete "Int", TypVar "a"), 
+                                                  ArrowTyp(ArrowTyp(Concrete "Int", TypVar "a"), 
+                                                           TypVar "a")))))
+                   meq in
+
+  (prelude mif, mif)
 
 (* generates the C code for a function;     
    acts essentially as a lambda function written in C: each function has a
@@ -226,15 +251,20 @@ let cppfunction (name : string) (arg : string)
                    []) in
     let ccapture = sep ", *" capture in
     let vcapture = sep ", void* " (remove arg capture) in
-    let index = ref 0 in
+
+    let currIndex = ref 0 in
+    let argIndex = ref 0 in
     let assigns = 
             List.fold_left 
               (^) ""
               (List.map (fun v -> (
-                  index := !index + 1;
-                  if v = arg then ""
+                  currIndex := !currIndex + 1;
+                  if v = arg then (
+                      argIndex := !currIndex;
+                      ""
+                  )
                   else
-                    "\t* ((void**) reserved + " ^ (string_of_int !index) ^ 
+                    "\t*((void**) reserved + " ^ (string_of_int !currIndex) ^ 
                     ") = " ^ v ^ ";\n")) capture) in
 
     "struct " ^ (mangleName name) ^ "{\n\
@@ -244,7 +274,7 @@ let cppfunction (name : string) (arg : string)
      void* " ^ (mangleCall name) ^ "(void* genenv, void* " ^ arg ^ "){\n\
          \tstruct " ^ (mangleName name) ^ 
                  " *env = (struct " ^ (mangleName name) ^ "*) genenv;\n\
-         \tenv->" ^ arg ^ " = " ^ arg ^ ";\n\
+         \t*((void**) env + " ^ (string_of_int (!argIndex)) ^ ") = " ^ arg ^ ";\n\
          \treturn " ^ body ^ ";\n\
      }\n\
      void* " ^ (mangleInit name) ^ "(void* " ^ vcapture ^ "){\n\
@@ -257,10 +287,19 @@ let cppfunction (name : string) (arg : string)
 
 (* instantiate a class corresponding to a function *)
 let cppfunctioninst (name : string) (arg : string) (typEnv : typeEnvironm) : string = 
-     let capture = (remove arg
-                   (M.fold (fun k _ acc -> k :: acc) typEnv [])) in
-     let conscapture = sep ", env->" capture in
-     (mangleInit name) ^ "(env->" ^ conscapture  ^ ")"
+    let capture = (M.fold (fun k _ acc -> k :: acc) typEnv []) in
+    let currIndex = ref 0 in
+    let assigns = 
+            List.fold_left 
+              (^) ""
+              (List.map (fun v -> (
+                  currIndex := !currIndex + 1;
+                  if v = arg then ""
+                  else
+                    ", *((void**) env + " ^ (string_of_int !currIndex) ^ ")")) 
+              capture) in
+
+     (mangleInit name) ^ "(" ^ (String.sub assigns 2 (String.length assigns - 2))  ^ ")"
 
 (* similar to the fix operator: enables recursion *)
 let fix name arg typEnv codee = 
@@ -271,19 +310,29 @@ let fix name arg typEnv codee =
      let ccapture = sep ", *" capture in
      let vcapture = sep ", void *" (remove arg capture) in
 
-     let assigns = 
+    let currIndex = ref 0 in
+    let argIndex = ref 0 in
+    let assigns = 
             List.fold_left 
               (^) ""
-              (List.map (fun v -> "\tenv->" ^ v ^ " = " ^ v ^ ";\n") 
-              (remove arg capture)) in
+              (List.map (fun v -> (
+                  currIndex := !currIndex + 1;
+                  if v = arg then (
+                      argIndex := !currIndex;
+                      ""
+                  )
+                  else
+                    "\t*((void**) env + " ^ (string_of_int !currIndex) ^ 
+                    ") = " ^ v ^ ";\n")) capture) in
 
      "struct " ^ mangleEnv name ^ "{\n\
+          \t void* (*call) (void*, void*);\n\
           \tvoid *" ^ ccapture ^ ";\n\
       };\n\
       void* " ^ mangleApp name ^ "(void* f, void *" ^ vcapture ^ "){\n\
           \tstruct " ^ mangleEnv name ^ "* env = malloc(sizeof(*env));\n"
           ^ assigns ^
-         "\tenv->" ^ arg ^ " = NULL;\n\
+         "\t*((void**) env + " ^ (string_of_int (!argIndex)) ^ ") = NULL;\n\
           \tvoid* arg = " ^ codee ^ ";\n\
           \t*(void**)(arg + " 
                  ^ string_of_int (1 + List.length capture) ^ 

@@ -48,10 +48,12 @@ val ifstatement : string
 val applyFunc : string
 
 (* struct corresponding to the initial state of the env *)
-val primitiveEnv : string
+val primitiveEnv : typeEnvironm -> string
+
+val buildPrimitiveEnv : (string * typeEnvironm)
 
 (* fixed includes and classes *)
-val prelude : string
+val prelude : typeEnvironm -> string
 
 (* generates the C code for a function;     
    acts essentially as a lambda function written in C: each function has a

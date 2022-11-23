@@ -42,7 +42,9 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
           if M.mem s typEnv
           then
               let (tp, sub) = unification (instantiate (M.find s typEnv)) t in
-              { code  = "env->" ^ s;
+              let ordered = (M.fold (fun k _ acc -> k :: acc) typEnv []) in
+              let index = find s ordered in
+              { code  = "(*((void**) env + 1 + " ^ string_of_int index ^ "))";
                 tp    = tp;
                 sexpr = (tp, SVar s);
                 sub   = sub;
@@ -278,9 +280,8 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
         
         (* special code generation for recursive let-bindings *)
         let name = nextEntry lastClass in
-        let capture = (remove "main" 
-                      (remove v 
-                      (M.fold (fun k _ acc -> k :: acc) typEnv []))) in
+        let capture = (remove v 
+                      (M.fold (fun k _ acc -> k :: acc) typEnv [])) in
         let acapture = sep ", env->" capture in
         let func = cppfunctioninst name v typEnv in
         (
@@ -343,9 +344,8 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
         
         (* special code generation for recursive let-bindings *)
         let name = nextEntry lastClass in
-        let capture = (remove "main" 
-                      (remove v 
-                      (M.fold (fun k _ acc -> k :: acc) typEnv []))) in
+        let capture = (remove v 
+                      (M.fold (fun k _ acc -> k :: acc) typEnv [])) in
         let acapture = sep ", env->" capture in
         let func = cppfunctioninst name v typEnv in
         (
