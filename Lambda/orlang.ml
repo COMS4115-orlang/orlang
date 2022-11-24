@@ -3,6 +3,7 @@ open Unification
 open Instantiation
 open Cpp
 open Semant
+open Codegen
 module M = Map.Make(String)
 module S = Set.Make(String)
 
@@ -10,12 +11,11 @@ let _ =
   let lexbuf = Lexing.from_channel stdin in
   let ast = Parser.topLevel Scanner.tokenize lexbuf in
   let (prelude, env) = buildPrimitiveEnv in
-  let sast = Semant.check ast env in
-  let { code  = code; 
-        var   = var;
-        tp    = _; 
+  let { tp    = _; 
         sexpr = sxp; 
-        sub   = _; } = sast in
+        sub   = _; } = Semant.check ast env in
+  let { code  = code;
+        var   = var } = Codegen.check sxp env in
 
   print_endline (prelude ^
                  !classes ^

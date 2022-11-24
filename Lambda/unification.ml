@@ -1,16 +1,18 @@
 open Ast
 module M = Map.Make(String)
+module S = Set.Make(String)
 
 type substitution = typ M.t
 type typeEnvironm = scheme M.t
 type evalResult = 
-  { code: string;
-    var : string;
-    tp  : typ;
+  { tp  : typ;
     sexpr : sExpr;
     sub : substitution;
   }
-
+type codegenResult = 
+  { code : string;
+    var  : string;
+  }
 
 (* apply a substitution to a type *)
 let rec apply (sub : substitution) (tp : typ) : typ = 

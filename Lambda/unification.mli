@@ -3,11 +3,13 @@ open Ast
 type substitution = typ Map.Make(String).t
 type typeEnvironm = scheme Map.Make(String).t
 type evalResult = 
-  { code: string;
-    var : string;
-    tp  : typ;
+  { tp  : typ;
     sexpr: sExpr;
     sub : substitution;
+  }
+type codegenResult = 
+  { code : string;
+    var  : string;
   }
 
 (* apply a substitution to a type *)
