@@ -1,7 +1,6 @@
 open Ast
 open Unification
 open Instantiation
-open Cpp
 open Semant
 open Codegen
 module M = Map.Make(String)
