@@ -11,7 +11,11 @@ let _ =
   let ast = Parser.topLevel Scanner.tokenize lexbuf in
   let (prelude, env) = buildPrimitiveEnv in
   let sast = Semant.check ast env in
-  let { code = result; tp = _; sexpr = sxp; sub = _; } = sast in
+  let { code  = code; 
+        var   = var;
+        tp    = _; 
+        sexpr = sxp; 
+        sub   = _; } = sast in
 
   print_endline (prelude ^
                  !classes ^
@@ -36,8 +40,9 @@ let _ =
         \tenv->operator_eq = malloc(sizeof(struct operator_eq_cls));\n\
         \t((struct operator_eq_cls*) env->operator_eq)->call = &operator_eq_call;\n\
         \tenv->operator_if = malloc(sizeof(struct operator_if_cls));\n\
-        \t((struct operator_if_cls*) env->operator_if)->call = &operator_if_call;\n\
-        \tprintf(\"%lld\\n\", ((long long)" ^ result ^ "));\n\
+        \t((struct operator_if_cls*) env->operator_if)->call = &operator_if_call;\n"
+        ^ code ^ 
+        "\tprintf(\"%lld\\n\", ((long long)" ^ var ^ "));\n\
         \treturn 0;\n\
     }");
     print_string ("/*" ^ Llvm.string_of_llmodule the_module ^ "*/")

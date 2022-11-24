@@ -5,6 +5,7 @@ type substitution = typ M.t
 type typeEnvironm = scheme M.t
 type evalResult = 
   { code: string;
+    var : string;
     tp  : typ;
     sexpr : sExpr;
     sub : substitution;

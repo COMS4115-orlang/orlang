@@ -260,7 +260,7 @@ let buildPrimitiveEnv : (string * typeEnvironm) =
    acts essentially as a lambda function written in C: each function has a
    unique corresponding class with its call operator and its capture *)
 let cppfunction (name : string) (arg : string) 
-                (body : string) (typEnv : typeEnvironm) : string = 
+                (body : (string * string)) (typEnv : typeEnvironm) : string = 
     let dummyScheme = Scheme([], (Concrete "Int")) in
     let capture = (M.fold (fun k _ acc -> k :: acc) 
                    (M.add arg dummyScheme typEnv) 
@@ -331,6 +331,7 @@ let cppfunction (name : string) (arg : string)
     let struct_cast = L.build_bitcast struct_load voidptr "struct_cast" builder in
     ignore(L.build_ret struct_cast builder);
     
+    let (code, evar) = body in
 
     "struct " ^ (mangleName name) ^ "{\n\
          \tvoid* (*call)(void*, void*);\n\
@@ -339,8 +340,9 @@ let cppfunction (name : string) (arg : string)
      void* " ^ (mangleCall name) ^ "(void* genenv, void* " ^ arg ^ "){\n\
          \tstruct " ^ (mangleName name) ^ 
                  " *env = (struct " ^ (mangleName name) ^ "*) genenv;\n\
-         \t*((void**) env + " ^ (string_of_int (!argIndex)) ^ ") = " ^ arg ^ ";\n\
-         \treturn " ^ body ^ ";\n\
+         \t*((void**) env + " ^ (string_of_int (!argIndex)) ^ ") = " ^ arg ^ ";\n"
+             ^ code ^ 
+         "\treturn " ^ evar ^ ";\n\
      }\n\
      void* " ^ (mangleInit name) ^ "(void* " ^ vcapture ^ "){\n\
         \tstruct " ^ (mangleName name) ^ "* reserved = \
@@ -351,7 +353,10 @@ let cppfunction (name : string) (arg : string)
      }\n"
 
 (* instantiate a class corresponding to a function *)
-let cppfunctioninst (name : string) (arg : string) (typEnv : typeEnvironm) : string = 
+let cppfunctioninst (var : string) 
+                    (name : string) 
+                    (arg : string) 
+                    (typEnv : typeEnvironm) : string = 
     let capture = (M.fold (fun k _ acc -> k :: acc) typEnv []) in
     let currIndex = ref 0 in
     let assigns = 
@@ -364,10 +369,11 @@ let cppfunctioninst (name : string) (arg : string) (typEnv : typeEnvironm) : str
                     ", *((void**) env + " ^ (string_of_int !currIndex) ^ ")")) 
               capture) in
 
-     (mangleInit name) ^ "(" ^ (String.sub assigns 2 (String.length assigns - 2))  ^ ")"
+     "\tvoid* " ^ var ^ " = " ^ (mangleInit name) ^ 
+             "(" ^ (String.sub assigns 2 (String.length assigns - 2))  ^ ");\n"
 
 (* similar to the fix operator: enables recursion *)
-let fix name arg typEnv codee = 
+let fix name arg typEnv body = 
     let dummyScheme = Scheme([], (Concrete "Int")) in
     let capture = (M.fold (fun k _ acc -> k :: acc) 
                    (M.add arg dummyScheme typEnv) 
@@ -390,6 +396,8 @@ let fix name arg typEnv codee =
                     "\t*((void**) env + " ^ (string_of_int !currIndex) ^ 
                     ") = " ^ v ^ ";\n")) capture) in
 
+    let (codee, evar) = body in
+
      "struct " ^ mangleEnv name ^ "{\n\
           \t void* (*call) (void*, void*);\n\
           \tvoid *" ^ ccapture ^ ";\n\
@@ -397,10 +405,10 @@ let fix name arg typEnv codee =
       void* " ^ mangleApp name ^ "(void* f, void *" ^ vcapture ^ "){\n\
           \tstruct " ^ mangleEnv name ^ "* env = malloc(sizeof(*env));\n"
           ^ assigns ^
-         "\t*((void**) env + " ^ (string_of_int (!argIndex)) ^ ") = NULL;\n\
-          \tvoid* arg = " ^ codee ^ ";\n\
-          \t*(void**)(arg + " 
+         "\t*((void**) env + " ^ (string_of_int (!argIndex)) ^ ") = NULL;\n"
+          ^ codee   ^ 
+         "\t*(void**)(" ^ evar ^ " + " 
                  ^ string_of_int (1 + List.length capture) ^ 
-                 " * sizeof(void*)) = arg;\n\
-          \treturn apply(f, arg);\n\
+                 " * sizeof(void*)) = " ^ evar ^ ";\n\
+          \treturn apply(f, " ^ evar ^ ");\n\
       }\n"

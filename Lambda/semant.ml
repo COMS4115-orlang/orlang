@@ -27,10 +27,13 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
              This also checks for referencing of undefined vars *)
           if M.mem s typEnv
           then
+              let var = "_" ^ (nextEntry lastTemp) in
               let tp = instantiate (M.find s typEnv) in
               let ordered = (M.fold (fun k _ acc -> k :: acc) typEnv []) in
               let index = find s ordered in
-              { code  = "(*((void**) env + 1 + " ^ string_of_int index ^ "))";
+              { code  = "\tvoid* " ^ var ^ 
+                        " = (*((void**) env + 1 + " ^ string_of_int index ^ "));\n";
+                var   = var;
                 tp    = tp;
                 sexpr = (tp, SVar s); 
                 sub   = M.empty;
@@ -41,10 +44,13 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
              This also checks for referencing of undefined vars *)
           if M.mem s typEnv
           then
+              let var = "_" ^ (nextEntry lastTemp) in
               let (tp, sub) = unification (instantiate (M.find s typEnv)) t in
               let ordered = (M.fold (fun k _ acc -> k :: acc) typEnv []) in
               let index = find s ordered in
-              { code  = "(*((void**) env + 1 + " ^ string_of_int index ^ "))";
+              { code  = "\tvoid* " ^ var ^ 
+                        " = (*((void**) env + 1 + " ^ string_of_int index ^ "));\n";
+                var   = var;
                 tp    = tp;
                 sexpr = (tp, SVar s);
                 sub   = sub;
@@ -52,107 +58,149 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
           else raise (Failure("use of undefined variable " ^ s))
 (*---------------------------------------------------------------------------*)  
   | NoHint(IntLit (i))           ->
+          let var = "_" ^ (nextEntry lastTemp) in
           let tp = Concrete "Int" in
-          { code  = "((void*) " ^ string_of_int i ^ ")";
+          { code  = "\tvoid* " ^ var ^ " = ((void*) " ^ string_of_int i ^ ");\n";
+            var   = var;
             tp    = tp;
             sexpr = (tp, SIntLit i);
             sub   = M.empty;
           }
   | Hint(IntLit (i), t)          ->
+          let var = "_" ^ (nextEntry lastTemp) in
           let (tp, sub) = unification (Concrete "Int") t in
-          { code = "((void*) " ^ string_of_int i ^ ")";
-            tp   = tp;
+          { code  = "\tvoid* " ^ var ^ " = ((void*) " ^ string_of_int i ^ ");\n";
+            var   = var;
+            tp    = tp;
             sexpr = (tp, SIntLit i);
-            sub  = sub;
+            sub   = sub;
           }          
 (*---------------------------------------------------------------------------*)  
   | NoHint(BoolLit (b))          ->
+          let var = "_" ^ (nextEntry lastTemp) in
           let tp = Concrete "Bool" in
-          { code = "((void*) " ^ string_of_int b ^ ")";
-            tp   = tp;
+          { code  = "\tvoid* " ^ var ^ " = ((void*) " ^ string_of_int b ^ ");\n";
+            var   = var;
+            tp    = tp;
             sexpr = (tp, SBoolLit b);
-            sub  = M.empty;
+            sub   = M.empty;
           }
   | Hint(BoolLit (b), t)         ->
+          let var = "_" ^ (nextEntry lastTemp) in
           let (tp, sub) = unification (Concrete "Bool") t in
-          { code = "((void*) " ^ string_of_int b ^ ")";
-            tp   = tp;
+          { code  = "\tvoid* " ^ var ^ " = ((void*) " ^ string_of_int b ^ ");\n";
+            var   = var;
+            tp    = tp;
             sexpr = (tp, SBoolLit b);
-            sub  = sub;
+            sub   = sub;
           }
 (*---------------------------------------------------------------------------*)  
   | NoHint(Lambda (LVar(v), e)) -> 
           let tv = nextTypVar last in
           let typEnvNew = M.add v (Scheme([], tv)) typEnv in
 
-          let { code = code; tp = bodyTyp; sexpr = bsexpr; sub = sub; } = check e typEnvNew in
+          let { code  = code; 
+                var   = evar;
+                tp    = bodyTyp; 
+                sexpr = bsexpr; 
+                sub   = sub; } = check e typEnvNew in
           let argTyp = apply sub tv in
 
           let name = nextEntry lastClass in
           let tp = ArrowTyp(argTyp, bodyTyp) in
+          let var = "_" ^ (nextEntry lastTemp) in
           (
               (* generate the code for the class/call/constructor of this lambda *)
               classes := !classes ^ 
-                         cppfunction name v code typEnv;
-              { code = cppfunctioninst name v typEnv;
-                tp   = tp;
+                         cppfunction name v (code, evar) typEnv;
+              { code  = cppfunctioninst var name v typEnv;
+                var   = var;
+                tp    = tp;
                 sexpr = (tp, SLambda (LVar(v), bsexpr));
-                sub  = sub;
+                sub   = sub;
               }
           )
   | Hint(Lambda (LVar(v), e), tp) -> 
           let tv = nextTypVar last in
           let typEnvNew = M.add v (Scheme([], tv)) typEnv in
 
-          let { code = code; tp = bodyTyp; sexpr = bsexpr; sub = sub1; } = check e typEnvNew in
+          let { code  = code; 
+                var   = evar;
+                tp    = bodyTyp; 
+                sexpr = bsexpr; 
+                sub   = sub1; } = check e typEnvNew in
           let argTyp = apply sub1 tv in
 
           let funcTyp, sub2 = unification (ArrowTyp(argTyp, bodyTyp)) tp in
           let sub = compose sub1 sub2 in
 
           let name = nextEntry lastClass in
+          let var = "_" ^ (nextEntry lastTemp) in
           (
               (* generate the code for the class/call/constructor of this lambda *)
               classes := !classes ^ 
-                         cppfunction name v code typEnv;
-              { code = cppfunctioninst name v typEnv;
-                tp   = funcTyp;
+                         cppfunction name v (code, evar) typEnv;
+              { code  = cppfunctioninst var name v typEnv;
+                var   = var;
+                tp    = funcTyp;
                 sexpr = (funcTyp, SLambda (LVar(v), bsexpr));
-                sub  = sub;
-              }
+                sub   = sub;
+              } 
           )
 (*---------------------------------------------------------------------------*)  
   | NoHint(Call (f, arg))       -> 
           let retTyp = nextTypVar last in
-          let { code = codef; tp = funcTypInit; sexpr = fsexpr; sub = sub1; } = check f typEnv in 
+          let { code  = codef; 
+                var   = fvar;
+                tp    = funcTypInit; 
+                sexpr = fsexpr; 
+                sub   = sub1; } = check f typEnv in 
           let typEnvNew = applyte sub1 typEnv in
-          let { code = codearg; tp = argTyp; sexpr = asexpr; sub = sub2; } = check arg typEnvNew in
+          let { code  = codearg;
+                var   = argvar;
+                tp    = argTyp; 
+                sexpr = asexpr; 
+                sub = sub2; } = check arg typEnvNew in
           let funcTypSub = apply sub2 funcTypInit in
           let funcTyp = ArrowTyp(argTyp, retTyp) in
           let _, sub3 = unification funcTypSub funcTyp in
           let sub = compose (compose sub1 sub2) sub3 in
           let tp = apply sub retTyp in
-
-          { code = "apply(" ^ codef ^ ", " ^ codearg ^ ")";
-            tp   = tp;
+          
+          let var = "_" ^ (nextEntry lastTemp) in
+          { code  = codef ^ codearg ^ 
+                    "\tvoid* " ^ var ^ " = apply(" ^ fvar ^ ", " ^ argvar ^ ");\n";
+            var   = var;
+            tp    = tp;
             sexpr = (tp, SCall (fsexpr, asexpr));
-            sub  = sub;
+            sub   = sub;
           }
   | Hint(Call (f, arg), t)      -> 
           let retTyp = t in
-          let { code = codef; tp = funcTypInit; sexpr = fsexpr; sub = sub1; } = check f typEnv in 
+          let { code  = codef; 
+                var   = fvar;
+                tp    = funcTypInit; 
+                sexpr = fsexpr; 
+                sub = sub1; } = check f typEnv in 
           let typEnvNew = applyte sub1 typEnv in
-          let { code = codearg; tp = argTyp; sexpr = asexpr; sub = sub2; } = check arg typEnvNew in
+          let { code  = codearg; 
+                var   = argvar;
+                tp    = argTyp; 
+                sexpr = asexpr; 
+                sub = sub2; } = check arg typEnvNew in
           let funcTypSub = apply sub2 funcTypInit in
           let funcTyp = ArrowTyp(argTyp, retTyp) in
           let _, sub3 = unification funcTypSub funcTyp in
           let sub = compose (compose sub1 sub2) sub3 in
           let tp = apply sub retTyp in 
 
-          { code = "apply(" ^ codef ^ ", " ^ codearg ^ ")";
-            tp   = tp;
+          let var = "_" ^ (nextEntry lastTemp) in
+          { code  = codef ^ codearg ^ 
+                    "\tvoid* " ^ var ^ " = apply(" ^ fvar ^ ", " ^ argvar ^ ");\n";
+            var   = var;
+            tp    = tp;
             sexpr = (tp, SCall (fsexpr, asexpr));
-            sub  = sub;
+            sub   = sub;
           }
 (*---------------------------------------------------------------------------*)  
   | NoHint(If (c, t, e))        -> 
@@ -188,28 +236,47 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
           (* evaluate the assigned type, generalize it, insert it back
              into the type environment together with the resulting
              substitutions, then evaluate the resulting type *)
-          let { code = codee; tp = t1; sexpr = esexpr; sub = sub1; } = check e typEnv in
+          let { code  = codee; 
+                var   = evar;
+                tp    = t1; 
+                sexpr = esexpr; 
+                sub = sub1; } = check e typEnv in
           let typEnvNew = applyte sub1 typEnv in
           let s1 = generalize t1 typEnvNew "" in
           let typEnvNew = M.add v s1 typEnv in
           let typEnvNew = applyte sub1 typEnvNew in
-          let { code = codef; tp = funcTyp; sexpr = fsexpr; sub = sub2; } = check f typEnvNew in
+          let { code  = codef; 
+                var   = fvar;
+                tp    = funcTyp; 
+                sexpr = fsexpr; 
+                sub = sub2; } = check f typEnvNew in
           let name = nextEntry lastClass in
+
+          let var = "_" ^ (nextEntry lastTemp) in
+          let tmp = "_" ^ (nextEntry lastTemp) in
           (
               (* C code is equivalent to lambda and call *)
               classes := !classes ^ 
-                         cppfunction name v codef typEnv;
-              { code = "apply(" ^ cppfunctioninst name v typEnv ^ ", " ^ codee ^ ")";
-                tp = funcTyp;
+                         cppfunction name v (codef, fvar) typEnv;
+              { code  = codee ^ 
+                        (cppfunctioninst tmp name v typEnv) ^ 
+                        "\tvoid* " ^ var ^ 
+                        " = apply(" ^ tmp ^ ", " ^ evar ^ ");\n";
+                var   = var;
+                tp    = funcTyp;
                 sexpr = (funcTyp, SLet (SBinding (LVar(v), esexpr, false), fsexpr));
-                sub = compose sub1 sub2;
+                sub   = compose sub1 sub2;
               }
           )
   | Hint(Let (Binding(LVar(v), e, false), f), t) ->
           (* evaluate the assigned type, unify it with the type hint and
              finally generalize; it is important to unify before generalizing
              since type hints are monomorphic *)
-          let { code = codee; tp = assnTyp; sexpr = esexpr; sub = sub1; } = check e typEnv in
+          let { code  = codee; 
+                var   = evar;
+                tp    = assnTyp; 
+                sexpr = esexpr; 
+                sub = sub1; } = check e typEnv in
           let typEnvNew = applyte sub1 typEnv in
           let (assnTypUni, sub2) = unification t assnTyp in
           let assnTypGen = generalize assnTypUni typEnvNew "" in
@@ -219,16 +286,26 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
           let typEnvNew = M.add v assnTypGen typEnv in
           let sub = compose sub1 sub2 in
           let typEnvNew = applyte sub typEnvNew in
-          let { code = codef; tp = funcTyp; sexpr = fsexpr; sub = sub3; } = check f typEnvNew in
-
+          let { code  = codef; 
+                var   = fvar;
+                tp    = funcTyp; 
+                sexpr = fsexpr; 
+                sub   = sub3; } = check f typEnvNew in
           let name = nextEntry lastClass in
+
+          let var = "_" ^ (nextEntry lastTemp) in
+          let tmp = "_" ^ (nextEntry lastTemp) in
           (
               classes := !classes ^ 
-                         cppfunction name v codef typEnv;
-              { code = "apply(" ^ cppfunctioninst name v typEnv ^ ", " ^ codee ^ ")";
-                tp = funcTyp;
+                         cppfunction name v (codef, fvar) typEnv;
+              { code  = codee ^ 
+                        (cppfunctioninst tmp name v typEnv) ^ 
+                        "\tvoid* " ^ var ^ 
+                        " = apply(" ^ tmp ^ ", " ^ evar ^ ");\n";
+                var   = var;
+                tp    = funcTyp;
                 sexpr = (funcTyp, SLet (SBinding (LVar(v), esexpr, false), fsexpr));
-                sub = compose sub sub3;
+                sub   = compose sub sub3;
               }
           )
 (*---------------------------------------------------------------------------*)  
@@ -254,7 +331,11 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
         (* evaluate the assigned type, unify it with the potential type hint,
            then generalize the unified type; it is important to generalize
            AFTER the unification since type hints are monomorphic *)
-        let { code = codee; tp = assnTyp; sexpr = esexpr; sub = sub1; } = check e typEnvNew in
+        let { code  = codee; 
+              var   = evar;
+              tp    = assnTyp; 
+              sexpr = esexpr; 
+              sub   = sub1; } = check e typEnvNew in
         let typEnvNew = applyte sub1 typEnv in
         let (vTypUni, sub2) = unification (apply sub1 vTyp) assnTyp in
         let vTypGen = generalize vTypUni typEnvNew v in
@@ -265,7 +346,11 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
         let typEnvNew = M.add v vTypGen typEnv in
         let sub = compose sub1 sub2 in
         let typEnvNew = applyte sub typEnvNew in
-        let { code = codef; tp = retTyp; sexpr = fsexpr; sub = sub3; } = check f typEnvNew in
+        let { code  = codef; 
+              var   = fvar;
+              tp    = retTyp; 
+              sexpr = fsexpr; 
+              sub   = sub3; } = check f typEnvNew in
 
         (* check that the resulting polymorphic type of v is an arrow type
            and discard the rec qualifier applied to non-arrow types; this
@@ -283,16 +368,21 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
         let capture = (remove v 
                       (M.fold (fun k _ acc -> k :: acc) typEnv [])) in
         let acapture = sep ", env->" capture in
-        let func = cppfunctioninst name v typEnv in
+        let var = "_" ^ (nextEntry lastTemp) in
+        let tmp = "_" ^ (nextEntry lastTemp) in
+        let func = cppfunctioninst tmp name v typEnv in
         (
             (* C code is equivalent to lambda and call *)
             classes := !classes ^ 
-                       cppfunction name v codef typEnv ^
-                       fix name v typEnv codee;
-            { code = mangleApp name ^ "(" ^ func ^ ", env->" ^ acapture ^ ")";
-              tp = retTyp;
+                       cppfunction name v (codef, fvar) typEnv ^
+                       fix name v typEnv (codee, evar);
+            { code  = func ^ 
+                      "\tvoid* " ^ var ^ " = " ^ 
+                           (mangleApp name) ^ "(" ^ tmp ^ ", env->" ^ acapture ^ ");\n";
+              var   = var;
+              tp    = retTyp;
               sexpr = (retTyp, SLet (SBinding (LVar(v), esexpr, true), fsexpr));
-              sub = compose sub sub3;
+              sub   = compose sub sub3;
             }
         )
 
@@ -318,7 +408,11 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
         (* evaluate the assigned type, unify it with the potential type hint,
            then generalize the unified type; it is important to generalize
            AFTER the unification since type hints are monomorphic *)
-        let { code = codee; tp = assnTyp; sexpr = esexpr; sub = sub1; } = check e typEnvNew in
+        let { code  = codee; 
+              var   = evar;
+              tp = assnTyp; 
+              sexpr = esexpr; 
+              sub = sub1; } = check e typEnvNew in
         let typEnvNew = applyte sub1 typEnv in
         let (vTypUni, sub2) = unification (apply sub1 vTyp) assnTyp in
         let vTypGen = generalize vTypUni typEnvNew v in
@@ -329,7 +423,11 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
         let typEnvNew = M.add v vTypGen typEnv in
         let sub = compose sub1 sub2 in
         let typEnvNew = applyte sub typEnvNew in
-        let { code = codef; tp = retTyp; sexpr = fsexpr; sub = sub3; } = check f typEnvNew in
+        let { code  = codef; 
+              var   = fvar;
+              tp    = retTyp; 
+              sexpr = fsexpr; 
+              sub = sub3; } = check f typEnvNew in
 
         (* check that the resulting polymorphic type of v is an arrow type
            and discard the rec qualifier applied to non-arrow types; this
@@ -347,16 +445,21 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
         let capture = (remove v 
                       (M.fold (fun k _ acc -> k :: acc) typEnv [])) in
         let acapture = sep ", env->" capture in
-        let func = cppfunctioninst name v typEnv in
+        let var = "_" ^ (nextEntry lastTemp) in
+        let tmp = "_" ^ (nextEntry lastTemp) in
+        let func = cppfunctioninst tmp name v typEnv in
         (
             (* C code is equivalent to lambda and call *)
             classes := !classes ^ 
-                       cppfunction name v codef typEnv ^
-                       fix name v typEnv codee;
-            { code = mangleApp name ^ "(" ^ func ^ ", env->" ^ acapture ^ ")";
-              tp = retTyp;
+                       cppfunction name v (codef, fvar) typEnv ^
+                       fix name v typEnv (codee, evar);
+            { code  = func ^ 
+                      "\tvoid* " ^ var ^ " = " ^ 
+                           (mangleApp name) ^ "(" ^ tmp ^ ", env->" ^ acapture ^ ");\n";
+              var   = var;
+              tp    = retTyp;
               sexpr = (retTyp, SLet (SBinding (LVar (v), esexpr, true), fsexpr));
-              sub = compose sub sub3;
+              sub   = compose sub sub3;
             }
         )
 

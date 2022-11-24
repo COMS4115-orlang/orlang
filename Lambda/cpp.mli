@@ -34,9 +34,9 @@ val buildPrimitiveEnv : (string * typeEnvironm)
 (* generates the C code for a function;     
    acts essentially as a lambda function written in C: each function has a
    unique corresponding class with its call operator and its capture *)
-val cppfunction : string -> string -> string -> typeEnvironm -> string
+val cppfunction : string -> string -> (string * string) -> typeEnvironm -> string
 
 (* instantiate a class corresponding to a function *)
-val cppfunctioninst : string -> string -> typeEnvironm -> string
+val cppfunctioninst : string -> string -> string -> typeEnvironm -> string
 
-val fix : string -> string -> typeEnvironm -> string -> string
+val fix : string -> string -> typeEnvironm -> (string * string) -> string

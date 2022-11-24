@@ -3,6 +3,7 @@ open Unification
 
 val last : int ref
 val lastClass : int ref
+val lastTemp : int ref
 val digits : int -> int list
 
 (* generates the next unique string given the previously generated one;

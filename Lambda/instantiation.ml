@@ -5,6 +5,7 @@ module S = Set.Make(String)
 
 let last = ref 0
 let lastClass = ref 0
+let lastTemp = ref 0
 let rec digits (x : int) : int list = 
   if x < 10 then [x]
   else (x mod 10) :: (digits (x / 10))
