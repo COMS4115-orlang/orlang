@@ -7,12 +7,19 @@
 %token LPAREN RPAREN 
 %token LBRACKET RBRACKET COMMA
 %token LAMBDA ARROW
+
 %token PLUS MINUS TIMES DIV MOD
+%token PPLUS PMINUS PTIMES PDIV PMOD
+
 %token LET REC EQUALS WHERE AND IN
 %token IF THEN ELSE
 %token EOF
 %token VAL COLON
-%token TRUE FALSE BAND BOR BNOT DOUBLEEQUALS
+%token TRUE FALSE 
+
+%token BAND BOR BNOT DOUBLEEQUALS
+%token PBAND PBOR PBNOT PDOUBLEEQUALS
+
 %token <int> LITERAL
 %token <string> VARIABLE
 %token <string> TYPE TYPEVAR
@@ -22,11 +29,11 @@
 %left ELSE
 %left IN
 %left COLON
-%left DOUBLEEQUALS
-%left BAND BOR
-%left BNOT
-%left PLUS MINUS
-%left TIMES DIV MOD
+%left DOUBLEEQUALS PDOUBLEEQUALS
+%left BAND BOR PBAND PBOR
+%left BNOT PBNOT
+%left PLUS MINUS PPLUS PMINUS
+%left TIMES DIV MOD PTIMES PDIV PMOD
 
 %start topLevel
 %type <Ast.hExpr> topLevel
@@ -110,6 +117,15 @@ expr:
                               }
 | LAMBDA lambda               { $2 }
 | LET binding IN expr         { NoHint(Let($2, $4)) }
+| expr PPLUS  expr            { NoHint(Binop(ADD, $1, $3)) }
+| expr PMINUS expr            { NoHint(Binop(SUB, $1, $3)) }
+| expr PTIMES expr            { NoHint(Binop(MLT, $1, $3)) }
+| expr PDIV   expr            { NoHint(Binop(DIV, $1, $3)) }
+| expr PMOD   expr            { NoHint(Binop(MOD, $1, $3)) }
+| expr PBAND  expr            { NoHint(Binop(AND, $1, $3)) }
+| expr PBOR   expr            { NoHint(Binop(OR, $1, $3)) }
+| expr PDOUBLEEQUALS   expr   { NoHint(Binop(EQ, $1, $3)) }
+| PBNOT  expr                 { NoHint(Unop(NOT, $2)) }
 | expr PLUS  expr             { NoHint(Call(NoHint(Call(NoHint(Var "operator_add"), $1)), $3)) }
 | expr MINUS expr             { NoHint(Call(NoHint(Call(NoHint(Var "operator_sub"), $1)), $3)) }
 | expr TIMES expr             { NoHint(Call(NoHint(Call(NoHint(Var "operator_mlt"), $1)), $3)) }

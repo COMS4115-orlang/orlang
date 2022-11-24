@@ -57,45 +57,6 @@ let mangleEnv (funName : string) : string =
 let mangleApp (funName : string) : string =
     funName ^ "_app"
 
-(* general C skeleton for a unary function *)
-let primitiveUnaryFunc (name : string) (sym : string) : string = 
-    "\
-     struct operator_" ^ name ^ "_cls{\n\
-	     \tvoid* (*call)(void*, void*);\n\
-	     \tvoid *x;\n\
-     };\n\
-     void* operator_" ^ name ^ "_call(void* genenv, void* x){\n\
-	     \tstruct operator_" ^ name ^ 
-                 "_cls *env = (struct operator_" ^ name ^ "_cls*) genenv;\n\
-	     \tenv->x = x;\n\
-         \treturn (void*)((long long)" ^ sym ^ "((long long) x));\n\
-     }\n"
-
-(* general C skeleton for a binary function *)
-let primitiveBinaryFunc (name : string) (sym : string) : string = 
-"\
-struct poperator_" ^ name ^ "_cls{\n\
-	\tvoid* (*call)(void*, void*);\n\
-	\tvoid *x, *y;\n\
-};\n\
-void* poperator_" ^ name ^ "_call(void* genenv, void* y){\n\
-	\tstruct poperator_" ^ name ^ "_cls *env = (struct poperator_" ^ name ^ "_cls*) genenv;\n\
-	\tenv->y = y;\n\
-	\treturn (void*) ((long long)((long long) env->x " ^ sym ^ " (long long) env->y));\n\
-}\n\
-struct operator_" ^ name ^ "_cls{\n\
-	\tvoid* (*call)(void*, void*);\n\
-	\tvoid *x;\n\
-};\n\
-void* operator_" ^ name ^ "_call(void* genenv, void* x){\n\
-	\tstruct operator_" ^ name ^ "_cls *env = (struct operator_" ^ name ^ "_cls*) genenv;\n\
-	\tenv->x = x;\n\
-    \tstruct poperator_" ^ name ^ "_cls *reserved = (struct poperator_" ^ name ^ "_cls*) malloc(sizeof(*reserved));\n\
-    \treserved->call = &poperator_" ^ name ^ "_call;\n\
-    \treserved->x = env->x;\n\
-	\treturn (void*) reserved;\n\
-}\n"
-
 (* C code for the if statement *)
 let ifstatement : string = 
 "struct ppoperator_if_cls{\n\
@@ -224,38 +185,16 @@ let prelude (typEnv : typeEnvironm) : string =
      #include <stdlib.h>\n" ^
     applyFunc ^ 
     (primitiveEnv typEnv) ^ 
-    ifstatement ^ 
-    (primitiveBinaryFunc "add" "+") ^ 
-    (primitiveBinaryFunc "sub" "-") ^
-    (primitiveBinaryFunc "mlt" "*") ^
-    (primitiveBinaryFunc "div" "/") ^ 
-    (primitiveBinaryFunc "mod" "%") ^
-    (primitiveBinaryFunc "and" "&") ^
-    (primitiveBinaryFunc "or"  "|") ^
-    (primitiveUnaryFunc  "not" "!") ^
-    (primitiveBinaryFunc "eq"  "==")
+    ifstatement
 
 let buildPrimitiveEnv : (string * typeEnvironm) = 
   let m = M.empty in
-  let commonInttp = ArrowTyp(Concrete "Int", ArrowTyp(Concrete "Int", Concrete "Int")) in
-  let commonBooltp = ArrowTyp(Concrete "Bool", ArrowTyp(Concrete "Bool", Concrete "Bool")) in
-  let commonGenerictp = ArrowTyp(TypVar "a", ArrowTyp(TypVar "a", Concrete "Bool")) in
-  let unaryBooltp = ArrowTyp(Concrete "Bool", Concrete "Bool") in
-  let madd = M.add "operator_add" (Scheme([], commonInttp)) m in
-  let msub = M.add "operator_sub" (Scheme([], commonInttp)) madd in
-  let mmlt = M.add "operator_mlt" (Scheme([], commonInttp)) msub in
-  let mdiv = M.add "operator_div" (Scheme([], commonInttp)) mmlt in
-  let mmod = M.add "operator_mod" (Scheme([], commonInttp)) mdiv in
-  let mand = M.add "operator_and" (Scheme([], commonBooltp)) mmod in
-  let mor  = M.add "operator_or"  (Scheme([], commonBooltp)) mand in
-  let mnot = M.add "operator_not" (Scheme([], unaryBooltp)) mor in
-  let meq  = M.add "operator_eq"  (Scheme([], commonGenerictp)) mnot in
   let mif  = M.add "operator_if"  
                    (Scheme(["a"], ArrowTyp(Concrete "Bool",
                                          ArrowTyp(ArrowTyp(Concrete "Int", TypVar "a"), 
                                                   ArrowTyp(ArrowTyp(Concrete "Int", TypVar "a"), 
                                                            TypVar "a")))))
-                   meq in
+                   m in
 
   (prelude mif, mif)
 
@@ -461,6 +400,42 @@ and check (sexpr : sExpr) (typEnv : typeEnvironm) : codegenResult =
           { code  = "\tvoid* " ^ var ^ " = ((void*) " ^ string_of_int b ^ ");\n";
             var   = var;
           }
+(*---------------------------------------------------------------------------*)  
+  | SBinop (b, e, f)     ->
+    let { code  = codee; 
+          var   = evar; } = check e typEnv in
+    let { code  = codef;
+          var   = fvar; } = check f typEnv in
+    let sym = match b with
+              | ADD -> "+"
+              | SUB -> "-"
+              | MLT -> "*"
+              | DIV -> "/"
+              | MOD -> "%"
+              | AND -> "&&"
+              | OR  -> "||"
+              | EQ  -> "==" in
+    let var = "_" ^ (nextEntry lastTemp) in
+    { code = codee ^ 
+             codef ^ 
+	         "\tvoid* " ^ var ^ " = (void*) ((long long)((long long) " ^ evar ^ " " 
+                        ^ sym ^ " (long long) " ^ fvar ^ "));\n";
+      var  = var;
+    }
+
+(*---------------------------------------------------------------------------*)  
+  | SUnop (b, e)     ->
+    let { code  = codee; 
+          var   = evar; } = check e typEnv in
+    let sym = match b with
+              | NOT -> "!" in
+    let var = "_" ^ (nextEntry lastTemp) in
+    { code = codee ^ 
+             "\tvoid* " ^ var ^ 
+                        " = (void*)((long long)" ^ sym ^ "((long long) " ^ evar ^ "));\n";
+      var  = var;
+    }
+
 (*---------------------------------------------------------------------------*)  
   | SLambda (LVar(v), e) -> 
           let name = nextEntry lastClass in

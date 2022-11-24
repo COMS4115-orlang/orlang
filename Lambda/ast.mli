@@ -8,9 +8,14 @@ type typ =
   | TypVar of string
   | ArrowTyp of typ * typ
 
+type binop = ADD | SUB | MLT | DIV | MOD | AND | OR | EQ
+type unop = NOT
+
 type expr =
     IntLit of int
   | BoolLit of int
+  | Binop of binop * hExpr * hExpr
+  | Unop of unop * hExpr
   | Var of string
   | Call of hExpr * hExpr
   | Lambda of lvalue * hExpr
@@ -39,10 +44,11 @@ type sExpr = typ * sx
 and sx =
     SIntLit of int
   | SBoolLit of int
+  | SBinop of binop * sExpr * sExpr
+  | SUnop of unop * sExpr
   | SVar of string
   | SCall of sExpr * sExpr
   | SLambda of lvalue * sExpr
-  | SIf of sExpr * sExpr * sExpr
   | SLet of sbinding * sExpr
 and sbinding = 
     SBinding of lvalue * sExpr * bool

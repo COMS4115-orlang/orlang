@@ -8,16 +8,25 @@ rule tokenize = parse
 | '*'   { TIMES }
 | '/'   { DIV }
 | '%'   { MOD }
+| "_+"  { PPLUS }
+| "_-"  { PMINUS }
+| "_*"  { PTIMES }
+| "_/"  { PDIV }
+| "_%"  { PMOD }
 | '('   { LPAREN }
 | ')'   { RPAREN }
 | '['   { LBRACKET }
 | ']'   { RBRACKET }
 | ','   { COMMA }
 | "=="  { DOUBLEEQUALS }
+| "_=="  { PDOUBLEEQUALS }
 | '='   { EQUALS }
 | "&&"  { BAND }
 | "||"  { BOR }
 | "!"   { BNOT }
+| "_&&"  { PBAND }
+| "_||"  { PBOR }
+| "_!"   { PBNOT }
 | '\\'  { LAMBDA }
 | "->"  { ARROW }
 | ":"   { COLON }
@@ -37,7 +46,7 @@ rule tokenize = parse
 | ['0'-'9']+ as lit { LITERAL(int_of_string lit) }
 | "true" { TRUE }
 | "false" { FALSE } 
-| ['a'-'z'] ['a'-'z' 'A'-'Z' '0'-'9']* as id { VARIABLE(id) }
+| ['a'-'z'] ['a'-'z' 'A'-'Z' '0'-'9' '_' ]* as id { VARIABLE(id) }
 | ['A'-'Z'] ['a'-'z' 'A'-'Z' '0'-'9']* as id { TYPE(id) }
 | '\''['a'-'z'] ['a'-'z' 'A'-'Z' '0'-'9']* as id { TYPEVAR(id) }
 | eof { EOF }

@@ -35,6 +35,70 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
               }
           else raise (Failure("use of undefined variable " ^ s))
 (*---------------------------------------------------------------------------*)  
+  | NoHint(Binop(b, e, f))      -> 
+          let tp = (match b with
+          | ADD -> Concrete "Int"
+          | SUB -> Concrete "Int"
+          | MLT -> Concrete "Int"
+          | DIV -> Concrete "Int"
+          | MOD -> Concrete "Int"
+          | AND -> Concrete "Bool" 
+          | OR  -> Concrete "Bool"
+          | EQ  -> Concrete "Bool") in
+          let { tp    = _;
+                sexpr = se;
+                sub   = _; } = check e typEnv in
+          let { tp    = _;
+                sexpr = sf;
+                sub   = _; } = check f typEnv in
+          { tp    = tp;
+            sexpr = (tp, SBinop(b, se, sf));
+            sub   = M.empty;
+          }
+  | Hint(Binop(b, e, f), t)     ->
+          let tp = (match b with
+          | ADD -> Concrete "Int"
+          | SUB -> Concrete "Int"
+          | MLT -> Concrete "Int"
+          | DIV -> Concrete "Int"
+          | MOD -> Concrete "Int"
+          | AND -> Concrete "Bool" 
+          | OR  -> Concrete "Bool"
+          | EQ  -> Concrete "Bool") in
+          let { tp    = _;
+                sexpr = se;
+                sub   = _; } = check e typEnv in
+          let { tp    = _;
+                sexpr = sf;
+                sub   = _; } = check f typEnv in
+          let (tp, sub) = unification tp t in
+          { tp    = tp;
+            sexpr = (tp, SBinop(b, se, sf));
+            sub   = M.empty;
+          }
+(*---------------------------------------------------------------------------*)  
+  | NoHint(Unop(b, e))      -> 
+          let tp = (match b with
+          | NOT -> Concrete "Bool") in
+          let { tp    = _;
+                sexpr = se;
+                sub   = _; } = check e typEnv in
+          { tp    = tp;
+            sexpr = (tp, SUnop(b, se));
+            sub   = M.empty;
+          }
+  | Hint(Unop(b, e), t)     ->
+          let tp = (match b with
+          | NOT -> Concrete "Bool") in
+          let { tp    = _;
+                sexpr = se;
+                sub   = _; } = check e typEnv in
+          let (tp, sub) = unification tp t in
+          { tp    = tp;
+            sexpr = (tp, SUnop(b, se));
+            sub   = M.empty;
+          }
+(*---------------------------------------------------------------------------*)  
   | NoHint(IntLit (i))           ->
           let tp = Concrete "Int" in
           { tp    = tp;
