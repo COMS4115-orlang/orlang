@@ -11,7 +11,7 @@
 %token PLUS MINUS TIMES DIV MOD
 
 %token LET REC EQUALS WHERE AND IN
-%token IF THEN ELSE PIF PTHEN PELSE
+%token IF THEN ELSE
 %token EOF
 %token VAL COLON
 %token TRUE FALSE 
@@ -24,14 +24,14 @@
 
 %right ARROW
 %left GUARD
-%left ELSE PELSE
+%left ELSE
 %left IN
 %left COLON
-%left DOUBLEEQUALS PDOUBLEEQUALS
-%left BAND BOR PBAND PBOR
-%left BNOT PBNOT
-%left PLUS MINUS PPLUS PMINUS
-%left TIMES DIV MOD PTIMES PDIV PMOD
+%left DOUBLEEQUALS
+%left BAND BOR
+%left BNOT
+%left PLUS MINUS
+%left TIMES DIV MOD
 
 %start topLevel
 %type <Ast.hExpr> topLevel
@@ -125,7 +125,6 @@ expr:
 | expr DOUBLEEQUALS   expr   { NoHint(Binop(EQ, $1, $3)) }
 | BNOT  expr                 { NoHint(Unop(NOT, $2)) }
 | IF expr THEN expr ELSE expr { NoHint(If($2, $4, $6)) }
-| PIF expr PTHEN expr PELSE expr { NoHint(PIf($2, $4, $6)) }
 | MATCH expr WITH patternMatrix SEMICOLON { NoHint(PatternMatch($2, $4)) }
 | LBRACKET lst RBRACKET       { (*TODO*) NoHint(IntLit(0)) }
 

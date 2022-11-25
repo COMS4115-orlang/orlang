@@ -28,11 +28,8 @@ rule tokenize = parse
 | "where" { WHERE }
 | "and" { AND }
 | "if"  { IF }
-| "_if"  { PIF }
 | "then" { THEN }
-| "_then" { PTHEN }
 | "else" { ELSE }
-| "_else" { PELSE }
 | "match" { MATCH}
 | "with" { WITH }
 | "|"   { GUARD }

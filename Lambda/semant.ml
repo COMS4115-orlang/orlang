@@ -79,22 +79,42 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
             sub   = sub;
           }
 (*---------------------------------------------------------------------------*)  
-  | NoHint(PIf(c, t, e))      -> 
-          check (Hint(PIf(c, t, e), nextTypVar last)) typEnv
-  | Hint(PIf(c, t, e), tp)     ->
-          let tp = nextTypVar last in
-          let { tp    = _;
+  | NoHint(If(c, t, e))      -> 
+          check (Hint(If(c, t, e), nextTypVar last)) typEnv
+  | Hint(If(c, t, e), tp)     ->
+          (* it is essential to NOT evaluate both branches prematurely;
+             this can lead to infinite runs on branches that are actually
+             never executed; for this reason, the two expressions within
+             the if are wrapped in lambdas; when a branch is entered, that
+             lambda is executed; this behaviour is sort-of thunk-like 
+           *)
+          let tp = ArrowTyp(nextTypVar last, tp) in
+          let t = NoHint(Lambda (LVar "res", t)) in
+          let e = NoHint(Lambda (LVar "res", e)) in
+          let { tp    = tc;
                 sexpr = sc;
-                sub   = _; } = check c typEnv in
-          let { tp    = _;
+                sub   = subc; } = check c typEnv in
+          let typEnvNew = applyte subc typEnv in
+          let (tU, subU) = unification tc (Concrete "Bool") in
+          let typEnvNew = applyte subU typEnv in
+          let sub = compose subc subU in
+          let { tp    = tt;
                 sexpr = st;
-                sub   = _; } = check t typEnv in
-          let { tp    = _;
+                sub   = subt; } = check t typEnvNew in
+          let typEnvNew = applyte subt typEnvNew in
+          let (tU, subU) = unification tt tp in
+          let typEnvNew = applyte subU typEnvNew in
+          let sub = compose (compose sub subt) subU in
+          let { tp    = te;
                 sexpr = se;
-                sub   = _; } = check e typEnv in
+                sub   = sube; } = check e typEnvNew in
+          let (tU, subU) = unification (apply sube tU) te in
+          let sub = compose (compose sub sube) subU in
+
+          let ArrowTyp(_, tp) = tU in
           { tp    = tp;
-            sexpr = (tp, SPIf(sc, st, se));
-            sub   = M.empty;
+            sexpr = (tp, SIf(sc, st, se));
+            sub   = sub;
           }
 (*---------------------------------------------------------------------------*)  
   | NoHint(IntLit (i))           ->
@@ -155,27 +175,6 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
             sexpr = (tp, SCall (fsexpr, asexpr));
             sub   = sub;
           }
-(*---------------------------------------------------------------------------*)  
-  | NoHint(If (c, t, e))        -> 
-          (* treat if-statements like a ternary operator/function with
-             type forall a. bool -> a -> a -> a; this removes the need
-             for any additional typing logic and relies on the correctness 
-             of function application 
-
-             it is essential to NOT evaluate both branches prematurely;
-             this can lead to infinite runs on branches that are actually
-             never executed; for this reason, the two expressions within
-             the if are wrapped in lambdas; when a branch is entered, that
-             lambda is executed; this behaviour is sort-of thunk-like
-           *)
-            
-          check (NoHint(Call(NoHint(Call(NoHint(Call(NoHint(Var "operator_if"), c)), 
-                                  NoHint(Lambda (LVar "res", t)))), 
-                                  NoHint(Lambda (LVar "res", e))))) typEnv
-  | Hint(If (c, t, e), tp)        -> 
-          check (Hint(Call(NoHint(Call(NoHint(Call(NoHint(Var "operator_if"), c)), 
-                                 NoHint(Lambda (LVar "res", t)))), 
-                                 NoHint(Lambda (LVar "res", e))), tp)) typEnv  
 (*---------------------------------------------------------------------------*)  
   | NoHint(Let (Binding(LVar(v), e, false), f)) ->
           check (Hint(Let (Binding(LVar(v), e, false), f), nextTypVar last)) typEnv

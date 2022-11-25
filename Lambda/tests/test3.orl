@@ -1,8 +1,5 @@
 (* booleans, and, or, not, if statement *)
 
-val operator_if : Bool -> 'd -> 'd -> 'e
-let operator_if c t e = _if c _then t _else e
-
 val f: 'a -> 'a
 let f = (\x -> x)
 

@@ -5,9 +5,6 @@
 (* this is ignored *)
 (* this is (* doubly *) ignored *)
 
-val operator_if : Bool -> 'b -> 'b -> 'b
-let operator_if c t e = _if c _then t _else e
-
 val five : Int
 let five =
   let f = (\x y -> 1 * (x - 2) * y) in 

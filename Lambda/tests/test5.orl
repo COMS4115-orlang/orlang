@@ -1,8 +1,5 @@
 (* Type Annotations *)
 
-val operator_if : Bool -> 'aaa -> 'aaa -> 'bbb
-let operator_if c t e = _if c _then t _else e
-
 val add : Int -> Int -> Int
 let add x y = (x : Int) + (y : Int)
 

@@ -1,6 +1,3 @@
 (* unification error: cannot apply an argument to an int *)
 
-val operator_if : Bool -> 'aaa -> 'aaa -> 'bbb
-let operator_if c t e = _if c _then t _else e
-
 let main = 1 2

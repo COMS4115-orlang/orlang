@@ -1,8 +1,5 @@
 (* unification error: id : int-> int cannot be called with bool *)
 
-val operator_if : Bool -> 'aaa -> 'aaa -> 'bbb
-let operator_if c t e = _if c _then t _else e
-
 let id x = (x : Int)
 
 let main = id true

@@ -1,8 +1,5 @@
 (* unification error: fac must be used monomorphically in definition *)
 
-val operator_if : Bool -> 'aaa -> 'aaa -> 'bbb
-let operator_if c t e = _if c _then t _else e
-
 let rec fac n = if n then fac true
                      else fac 0
 

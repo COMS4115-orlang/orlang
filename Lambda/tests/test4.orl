@@ -2,9 +2,6 @@
    outside of their definition and monomorphically inside of their
    definition; redundant recursion *)
 
-val operator_if : Bool -> 'aaa -> 'aaa -> 'bbb
-let operator_if c t e = _if c _then t _else e
-
 val fac : Int -> Int
 let rec fac n = 
   if n == 0 then 0
@@ -21,3 +18,4 @@ val applyFunc: ('b -> 'c) -> 'b -> 'c
 let rec applyFunc f x = f x
 
 let main = applyFunc (applyFunc id fac) (applyFunc id x)
+

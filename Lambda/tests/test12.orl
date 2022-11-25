@@ -1,8 +1,5 @@
 (* unification error: if condition must be bool *)
 
-val operator_if : Bool -> 'aaa -> 'aaa -> 'bbb
-let operator_if c t e = _if c _then t _else e
-
 let x = 3
 let y = 
   (\z ->

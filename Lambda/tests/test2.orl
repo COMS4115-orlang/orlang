@@ -1,8 +1,5 @@
 (* Monomorphism; non-recursive let bindings *)
 
-val operator_if : Bool -> 'b -> 'b -> 'b
-let operator_if c t e = _if c _then t _else e
-
 val y : Int
 let y =
   let x = 5 in

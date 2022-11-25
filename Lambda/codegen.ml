@@ -278,6 +278,10 @@ and fix name arg lambdaName typEnv body =
                    []) in
      let ccapture = sep ", *" capture in
      let vcapture = sep ", void *" (remove arg capture) in
+     let vcapture = if String.length vcapture > 0
+                    then ", void*" ^ vcapture
+                    else vcapture
+     in
 
     let currIndex = ref 0 in
     let argIndex = ref 0 in
@@ -301,7 +305,7 @@ and fix name arg lambdaName typEnv body =
           \t void* (*call) (void*, void*);\n\
           \tvoid *" ^ ccapture ^ ";\n\
       };\n\
-      void* " ^ mangleApp name ^ "(void* f, void *" ^ vcapture ^ "){\n\
+      void* " ^ mangleApp name ^ "(void* f" ^ vcapture ^ "){\n\
           \tstruct " ^ mangleEnv name ^ "* env = malloc(sizeof(*env));\n"
           ^ assigns ^
          "\t*((void**) env + " ^ (string_of_int (!argIndex)) ^ ") = NULL;\n"
@@ -373,7 +377,7 @@ and check (sexpr : sExpr) (typEnv : typeEnvironm) : codegenResult =
       var  = var;
     }
 (*---------------------------------------------------------------------------*)  
-  | SPIf (c, t, e)     ->
+  | SIf (c, t, e)     ->
     let { code  = codec; 
           var   = cvar; } = check c typEnv in
     let { code  = codet; 
@@ -453,12 +457,17 @@ and check (sexpr : sExpr) (typEnv : typeEnvironm) : codegenResult =
         let capture = (remove v 
                       (M.fold (fun k _ acc -> k :: acc) typEnv [])) in
         let acapture = sep ", env->" capture in
+        let acapture = if String.length acapture > 0 
+                       then ", env->" ^ acapture
+                       else acapture
+        in
+                        
         let var = "_" ^ (nextEntry lastTemp) in
         let tmp = "_" ^ (nextEntry lastTemp) in
         let func = cppfunctioninst tmp name v typEnv in
         { code  = func ^ 
                   "\tvoid* " ^ var ^ " = " ^ 
-                       (mangleApp name) ^ "(" ^ tmp ^ ", env->" ^ acapture ^ ");\n";
+                       (mangleApp name) ^ "(" ^ tmp ^ acapture ^ ");\n";
           var   = var;
         }
 

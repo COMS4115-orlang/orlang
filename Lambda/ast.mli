@@ -16,7 +16,6 @@ type expr =
   | BoolLit of int
   | Binop of binop * hExpr * hExpr
   | Unop of unop * hExpr
-  | PIf of hExpr * hExpr * hExpr
   | Var of string
   | Call of hExpr * hExpr
   | Lambda of lvalue * hExpr
@@ -47,7 +46,7 @@ and sx =
   | SBoolLit of int
   | SBinop of binop * sExpr * sExpr
   | SUnop of unop * sExpr
-  | SPIf of sExpr * sExpr * sExpr
+  | SIf of sExpr * sExpr * sExpr
   | SVar of string
   | SCall of sExpr * sExpr
   | SLambda of lvalue * sExpr
