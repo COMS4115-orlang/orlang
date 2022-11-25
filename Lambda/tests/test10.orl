@@ -1,29 +1,5 @@
-val operator_add : Int -> Int -> Int
-let operator_add x y = x _+ y
-
-val operator_sub : Int -> Int -> Int
-let operator_sub x y = x _- y
-
-val operator_mlt : Int -> Int -> Int
-let operator_mlt x y = x _* y
-
-val operator_div : Int -> Int -> Int
-let operator_div x y = x _/ y
-
-val operator_mod : Int -> Int -> Int
-let operator_mod x y = x _% y
-
-val operator_and : Bool -> Bool -> Bool
-let operator_and x y = x _&& y
-
-val operator_or : Bool -> Bool -> Bool
-let operator_or x y = x _|| y
-
-val operator_not : Bool -> Bool
-let operator_not x = _! x
-
-val operator_eq : 'a -> 'a -> Bool
-let operator_eq x y = x _== y
+val operator_if : Bool -> 'aaa -> 'aaa -> 'bbb
+let operator_if c t e = _if c _then t _else e
 
 let random x y =
   match x with

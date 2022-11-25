@@ -20,6 +20,8 @@ all_tests: build
 	-./test.sh 15
 	-./test.sh 16
 	-./test.sh 17
+	-./test.sh 18
+	-./test.sh 19
 	
 .PHONY : test
 test:
