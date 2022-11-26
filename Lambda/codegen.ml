@@ -109,7 +109,7 @@ let applyFunc : (L.llvalue *   (* llvalue of the apply function *)
                  string) =     (* C code associated with it *)
     (* function signature and param space *)
     let (func, builder, f :: arg :: []) = 
-        llvmFuncDef "apply" ["f"; "arg"] in
+        llvmFuncDef "_apply" ["f"; "arg"] in
 
     (* load ptrptr f *)
     let f_load = L.build_load f "f_load" builder in 
@@ -130,24 +130,6 @@ let applyFunc : (L.llvalue *   (* llvalue of the apply function *)
      }\n")
 
 (* generate a call to the `apply` function with arguments f and arg *)
-let callAppSp (var : string)          (* name of result *)
-              (local : L.llvalue)     (* llvalue of result *)
-              (fvar : string)         (* name of function *)
-              (flvar : L.llvalue)     (* llvalue of function *)
-              (argvar : string)       (* name of argument *)
-              (arglvar : L.llvalue)   (* llvalue of argument *)
-              (builder : L.llbuilder) (* builder where to insert this *)
-              : string =              (* C code *)
-    let (apply, _) = applyFunc in
-    
-    (* call apply function and store result in llvalue *)
-    let fload = L.build_load flvar "_fload" builder in
-    let argload = L.build_load arglvar "_argload" builder in
-    let call = L.build_call apply [|fload; argload|] "call" builder in
-    let _ = L.build_store call local builder in
-
-    "\t" ^ var ^ " = apply(" ^ fvar ^ ", " ^ argvar ^ ");\n"
-(* generate a call to the `apply` function with arguments f and arg *)
 let callApply (var : string)          (* name of result *)
               (fvar : string)         (* name of function *)
               (flvar : L.llvalue)     (* llvalue of function *)
@@ -156,12 +138,17 @@ let callApply (var : string)          (* name of result *)
               (builder : L.llbuilder) (* builder where to insert this *)
               : (L.llvalue *          (* llvalue of result *)
                  string) =            (* C code *)
-    (* call apply function and store result in llvalue *)
+    (* get llvalue of apply function and alloc space for result *)
+    let (apply, _) = applyFunc in
     let local = L.build_alloca voidptr var builder in
-    let code = callAppSp var local 
-                         fvar flvar 
-                         argvar arglvar 
-                         builder in
+    
+    (* call apply function and store result in llvalue *)
+    let fload = L.build_load flvar "_fload" builder in
+    let argload = L.build_load arglvar "_argload" builder in
+    let call = L.build_call apply [|fload; argload|] "call" builder in
+    let _ = L.build_store call local builder in
+
+    let code = "\t" ^ var ^ " = apply(" ^ fvar ^ ", " ^ argvar ^ ");\n" in
     (local, 
     "\tvoid* " ^ var ^ ";\n" ^ code)
 
