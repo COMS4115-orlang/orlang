@@ -8,6 +8,14 @@ module S = Set.Make(String)
 module L = Llvm
 
 let _ =
+  let mode = (match Sys.argv with
+              | [| _ |]           -> "-llvm"
+              | [| _ ; "-c" |]    -> "-c"
+              | [| _ ; "-llvm" |] -> "-llvm"
+              | _                 -> 
+                      raise (Failure("usage: " ^ Sys.argv.(0) ^ " <mode=-c/-llvm>\n"));
+             ) in
+  
   let lexbuf = Lexing.from_channel stdin in
   let ast = Parser.topLevel Scanner.tokenize lexbuf in
   let (prelude, env) = buildPrimitiveEnv in
@@ -46,12 +54,12 @@ let _ =
   (* return 0 *)
   let _ = L.build_ret (L.const_int i32_t 0) builder in
 
-  (* C code generation *)
-  print_endline (prelude ^
-                 !classes ^
-   "\nint main(){\n" ^ 
-        code ^ 
-        "\tprintf(\"%lld\\n\", ((long long)" ^ var ^ "));\n\
-        \treturn 0;\n\
-    }");
-    print_string ("/*" ^ Llvm.string_of_llmodule the_module ^ "*/")
+  if mode = "-c"
+  then print_endline (prelude ^
+                      !classes ^
+                      "\nint main(){\n" ^ 
+                      code ^ 
+                      "\tprintf(\"%lld\\n\", ((long long)" ^ var ^ "));\n\
+                       \treturn 0;\n\
+                       }")
+  else print_string (Llvm.string_of_llmodule the_module)

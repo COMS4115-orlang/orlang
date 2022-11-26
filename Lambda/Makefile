@@ -31,4 +31,4 @@ test:
 
 .PHONY : clean
 clean :
-	rm -rf orlang.native *.cmi *.cmo parser.ml parser.mli scanner.ml orlang tests/*.c tests/a.out parser.output _build tests/*.out a.out
+	rm -rf orlang.native *.cmi *.cmo parser.ml parser.mli scanner.ml orlang tests/*.c tests/*.ll tests/a.out parser.output _build tests/*.out a.out
