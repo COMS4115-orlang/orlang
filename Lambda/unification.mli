@@ -1,4 +1,5 @@
 open Ast
+module L = Llvm
 
 type substitution = typ Map.Make(String).t
 type typeEnvironm = scheme Map.Make(String).t
@@ -10,6 +11,7 @@ type evalResult =
 type codegenResult = 
   { code : string;
     var  : string;
+    lvar : L.llvalue;
   }
 
 (* apply a substitution to a type *)
