@@ -170,7 +170,7 @@ let ifFunc : (L.llvalue *   (* llvalue of the if function *)
               string) =     (* C code associated with it *)
     (* function signature and param space *)
     let (func, builder, c :: t :: e :: []) = 
-        llvmFuncDef "_if" ["c"; "t"; "e"] in
+        llvmFuncDef "_if_func" ["c"; "t"; "e"] in
 
     let nullvar = L.build_alloca voidptr "_nullvar" builder in
     let _ = L.build_store (L.const_null voidptr) nullvar builder in
@@ -202,7 +202,7 @@ let ifFunc : (L.llvalue *   (* llvalue of the if function *)
 
     (* C code generation *)
     (func, 
-    "void* _if(void* c, void* t, void* e){\n\
+    "void* _if_func(void* c, void* t, void* e){\n\
          \tif(c){\n\
          \t" ^ then_assign ^ "\
          \t\t return _res;\n\
@@ -425,7 +425,7 @@ let rec cppfunction (name : string)           (* name of the function *)
     )
 
 (* similar to the fix operator: enables recursion *)
-and fix name arg lambdaName typEnv body = 
+and fix (name : string) arg lambdaName typEnv body = 
     let dummyScheme = Scheme([], (Concrete "Int")) in
     let capture = (M.fold (fun k _ acc -> k :: acc) 
                    (M.add arg dummyScheme typEnv) 
@@ -490,7 +490,9 @@ and fix name arg lambdaName typEnv body =
                 capture) in
     
     (* NULL assignment *)
-    let _ = llvmAssignMember allocd_struct (L.const_null voidptr) (!argIndex) builder in
+    let nullvar = L.build_alloca voidptr "_nullvar" builder in
+    let _ = L.build_store (L.const_null voidptr) nullvar builder in
+    let _ = llvmAssignMember allocd_struct nullvar (!argIndex) builder in
 
     (* insert body of the call function *)
     let (e, te) = body in
@@ -518,6 +520,7 @@ and fix name arg lambdaName typEnv body =
 
 (*---------------------------------------------------------------------------*)  
      (* C code generation *)
+    (fn_app, 
      "struct " ^ mangleEnv name ^ "{\n\
           \t void* (*call) (void*, void*);\n\
           \tvoid *" ^ ccapture ^ ";\n\
@@ -535,6 +538,7 @@ and fix name arg lambdaName typEnv body =
                  " * sizeof(void* )) = " ^ evar ^ ";\n\
           \treturn apply(f, " ^ evar ^ ");\n\
       }\n"
+    )
 
 and check (sexpr : sExpr)          (* expression to translate *)
           (typEnv : typeEnvironm)  (* type environment *)
@@ -699,7 +703,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
     { code = codec ^
              codet ^
              codee ^
-             "\tvoid* " ^ var ^ " = _if(" ^ cvar ^ ", " ^ tvar ^ ", " ^ evar ^");\n";
+             "\tvoid* " ^ var ^ " = _if_func(" ^ cvar ^ ", " ^ tvar ^ ", " ^ evar ^");\n";
       var  = var;
       lvar = local;
     }
@@ -765,7 +769,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
             lvar  = local;
           }
 (*---------------------------------------------------------------------------*)  
-(*  | SLet (SBinding(LVar(v), e, _), f)  ->
+  | SLet (SBinding(LVar(v), e, _), f)  ->
         let w = (match e with
                  | (_, SLambda(LVar(w), _)) -> w
                  | _ -> raise(Failure("Impossible")))
@@ -773,28 +777,63 @@ and check (sexpr : sExpr)          (* expression to translate *)
         let name = nextEntry lastClass in
         let typEnvNew = M.add v (Scheme ([], Concrete "Int")) typEnv in
 
-        let (llvm_init, snippet) = cppfunction name v (f, typEnvNew) typEnv;
+        let (llvm_init, init_snippet) = cppfunction name v (f, typEnvNew) typEnv in
+        let (llvm_app, app_snippet) = fix name v w typEnv (e, typEnvNew) in
         classes := !classes ^ 
-                   snippet ^
-                   fix name v w typEnv (e, typEnvNew);
+                   init_snippet ^
+                   app_snippet;
 
         
         (* special code generation for recursive let-bindings *)
-        let capture = (remove v 
-                      (M.fold (fun k _ acc -> k :: acc) typEnv [])) in
-        let acapture = sep ", env->" capture in
+        let capture = (M.fold (fun k _ acc -> k :: acc) typEnv []) in
+        let acapture = sep ", env->" (remove v capture) in
         let acapture = if String.length acapture > 0 
                        then ", env->" ^ acapture
                        else acapture
         in
                     
-        (* TODO *)
-        let var = "_" ^ (nextEntry lastTemp) in
         let tmp = "_" ^ (nextEntry lastTemp) in
-        let func = cppfunctioninst tmp name llvm_init v typEnv llvmEnv builder in
-        { code  = func ^ 
+        let (ltmp, inst_snippet) = 
+                     cppfunctioninst tmp name llvm_init v typEnv llvmEnv builder in
+
+        (* allocate space for result *)
+        let var = "_" ^ (nextEntry lastTemp) in
+        let local = L.build_alloca voidptr var builder in
+
+        (* call apply function and store result *)
+        let tmpload = L.build_load ltmp "_tmpload" builder in
+
+        let currIndex = ref 0 in
+        let llvmArgs = 
+                (List.fold_left 
+                (fun acc w ->
+                    currIndex := !currIndex + 1;
+                    if w = v
+                    then acc
+                    else
+                        let var = "_" ^ (nextEntry lastTemp) in
+                        (* load structure, cast it, index into it *)
+                        let struct_load = L.build_load llvmEnv "struct_load" builder in
+                        let struct_cast = L.build_bitcast struct_load 
+                                                  voidptrptr "struct_cast" builder in
+                        let elem_ptr    = L.build_in_bounds_gep struct_cast
+                                                  [| L.const_int i64_t (!currIndex) |]
+                                                  "elem_ptr" builder in
+                        (* load the result to be passed to the init call *)
+                        let load = L.build_load elem_ptr (var ^ "_load") builder in
+
+                        acc @ [load]
+                )
+                [tmpload]
+                capture) in
+
+        let call = L.build_call llvm_app (Array.of_list llvmArgs) "call" builder in
+        let _ = L.build_store call local builder in
+
+        { code  = inst_snippet ^ 
                   "\tvoid* " ^ var ^ " = " ^ 
                        (mangleApp name) ^ "(" ^ tmp ^ acapture ^ ");\n";
           var   = var;
+          lvar  = local;
         }
-*)
+
