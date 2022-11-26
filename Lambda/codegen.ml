@@ -167,8 +167,6 @@ let cppfunctioninst (var : string)
                     then acc
                     else
                         let var = "_" ^ (nextEntry lastTemp) in
-                        (* allocate space for result *)
-                        let local = L.build_alloca voidptr var builder in
                         (* load structure, cast it, index into it *)
                         let struct_load = L.build_load llvmEnv "struct_load" builder in
                         let struct_cast = L.build_bitcast struct_load 
@@ -176,9 +174,8 @@ let cppfunctioninst (var : string)
                         let elem_ptr    = L.build_in_bounds_gep struct_cast
                                                   [| L.const_int i64_t (!currIndex) |]
                                                   "elem_ptr" builder in
-                        (* store result in allocd space, load it *)
-                        let _ = L.build_store elem_ptr local builder in
-                        let load = L.build_load local (var ^ "_load") builder in
+                        (* load the result to be passed to the init call *)
+                        let load = L.build_load elem_ptr (var ^ "_load") builder in
 
                         acc @ [load]
                 )
@@ -466,8 +463,9 @@ and check (sexpr : sExpr) (typEnv : typeEnvironm) llvmEnv builder : codegenResul
           let elem_ptr    = L.build_in_bounds_gep struct_cast
                                                   [| L.const_int i64_t (1 + index) |]
                                                   "elem_ptr" builder in
+          let elem_load   = L.build_load elem_ptr "elem_load" builder in
           (* store result in allocd space *)
-          let _ = L.build_store elem_ptr local builder in
+          let _ = L.build_store elem_load local builder in
 
               { code  = "\tvoid* " ^ var ^ 
                         " = (*((void**) env + " ^ string_of_int (1 + index) ^ "));\n";
