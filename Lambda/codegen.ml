@@ -28,6 +28,40 @@ let rec sep (sym : string) : string list -> string = function
   | x :: xs -> x ^ sym ^ (sep sym xs)
   | _ -> ""
 
+(* inserts a prefix in front of each element of a list and concatenates *)
+let rec pref (sym : string) : string list -> string = function
+  | x :: [] -> sym ^ x
+  | x :: xs -> sym ^ x ^ (pref sym xs)
+  | _ -> ""
+
+(* zips a list with their indices *)
+let zipWithIndex (xs : 'a list) :
+                 ('a * int) list = 
+    let currIndex = ref 0 in
+    List.map (fun v ->
+                  currIndex := !currIndex + 1;
+                  (v, !currIndex)
+             ) xs
+
+(* remove an element from an indexed list *)
+let rec removeIndexed (xs : ('a * int) list)
+                  (v : 'a)
+                  : ('a * int) list =
+  match xs with
+  | [] -> []
+  | (x, i) :: ys -> if x = v 
+                    then ys
+                    else (x, i) :: (removeIndexed ys v)
+
+(* normal zip function *)
+let rec zip (xs : 'a list) 
+            (ys : 'b list) = 
+  match (xs, ys) with
+  | (_, []) -> []
+  | ([], _) -> []
+  | (x :: xss, y :: yss) -> (x, y) :: zip xss yss
+
+
 (* comma separated list to string *)
 let commasep (x : string list) : string = sep ", " x
 
@@ -108,7 +142,7 @@ let llvmAssignMember (allocd_struct : L.llvalue) (* llvalue of structure *)
 let applyFunc : (L.llvalue *   (* llvalue of the apply function *)
                  string) =     (* C code associated with it *)
     (* function signature and param space *)
-    let (func, builder, f :: arg :: []) = 
+    let (func, builder, [f; arg]) = 
         llvmFuncDef "_apply" ["f"; "arg"] in
 
     (* load ptrptr f *)
@@ -156,7 +190,7 @@ let callApply (var : string)          (* name of result *)
 let ifFunc : (L.llvalue *   (* llvalue of the if function *)
               string) =     (* C code associated with it *)
     (* function signature and param space *)
-    let (func, builder, c :: t :: e :: []) = 
+    let (func, builder, [c; t; e]) = 
         llvmFuncDef "_if_func" ["c"; "t"; "e"] in
 
     let nullvar = L.build_alloca voidptr "_nullvar" builder in
@@ -201,17 +235,13 @@ let ifFunc : (L.llvalue *   (* llvalue of the if function *)
      }\n")
 
 (* fixed includes and classes *)
-let prelude (typEnv : typeEnvironm) : string = 
+let prelude : string = 
     let (_, applyCode) = applyFunc in
     let (_, ifCode) = ifFunc in
     "#include<stdio.h>\n\
      #include <stdlib.h>\n" ^
     applyCode ^
     ifCode
-    
-let buildPrimitiveEnv : (string * typeEnvironm) = 
-  let m = M.empty in
-  (prelude m, m)
 
 (* find the index of an element in a list *)
 let find x ys = 
@@ -220,6 +250,33 @@ let find x ys =
     | y :: ys -> if x = y then index
                           else helper x (index + 1) ys
     in helper x 0 ys
+
+(* load all the variables in the env except for one *)
+let loadEnvExcept (typEnv : typeEnvironm)  (* the type environment *)
+                  (llvmEnv : L.llvalue)    (* its associated llvalue *)
+                  (except : string)        (* variable to exclude *)
+                  (builder : L.llbuilder)  (* builder for instructions *)
+                  : L.llvalue list =       (* list of loaded vars *)
+    let capture = (M.fold (fun k _ acc -> k :: acc) typEnv []) in
+    let captureIndex = zipWithIndex capture in
+    let captureFiltr = removeIndexed captureIndex except in
+    List.fold_left
+         (fun acc (v, currIndex) ->
+              let var = "_" ^ (nextEntry lastTemp) in
+              (* load structure, cast it, index into it *)
+              let struct_load = L.build_load llvmEnv "struct_load" builder in
+              let struct_cast = L.build_bitcast struct_load 
+                                  voidptrptr "struct_cast" builder in
+              let elem_ptr    = L.build_in_bounds_gep struct_cast
+                                  [| L.const_int i64_t (currIndex) |]
+                                  "elem_ptr" builder in
+              (* load the result to be passed to the init call *)
+              let load = L.build_load elem_ptr (var ^ "_load") builder in
+
+              acc @ [load]
+         )
+         []
+         captureFiltr
 
 (* instantiate a class corresponding to a function *)
 let cppfunctioninst (var : string)           (* the varname of the result *)
@@ -231,42 +288,19 @@ let cppfunctioninst (var : string)           (* the varname of the result *)
                     (builder : L.llbuilder)  (* builder where to insert this *)
                     : (L.llvalue *           (* llvalue of the result *)
                        string) =             (* C code *)
+
+    (* get capture, add indices and remove arg *)
     let capture = (M.fold (fun k _ acc -> k :: acc) typEnv []) in
-    let currIndex = ref 0 in
+    let captureIndex = zipWithIndex capture in
+    let captureFiltr = removeIndexed captureIndex arg in
     let assigns = 
             List.fold_left 
               (^) ""
-              (List.map (fun v -> (
-                  currIndex := !currIndex + 1;
-                  if v = arg then ""
-                  else
-                    ", *((void** ) env + " ^ (string_of_int !currIndex) ^ ")")) 
-              capture) in
+              (List.map (fun (v, currIndex) ->
+                    ", *((void** ) env + " ^ (string_of_int currIndex) ^ ")")
+              captureFiltr) in
     
-    (* prepare call arguments *)
-    let currIndex = ref 0 in
-    let llvmArgs = 
-                (List.fold_left 
-                (fun acc v ->
-                    currIndex := !currIndex + 1;
-                    if v = arg 
-                    then acc
-                    else
-                        let var = "_" ^ (nextEntry lastTemp) in
-                        (* load structure, cast it, index into it *)
-                        let struct_load = L.build_load llvmEnv "struct_load" builder in
-                        let struct_cast = L.build_bitcast struct_load 
-                                                  voidptrptr "struct_cast" builder in
-                        let elem_ptr    = L.build_in_bounds_gep struct_cast
-                                                  [| L.const_int i64_t (!currIndex) |]
-                                                  "elem_ptr" builder in
-                        (* load the result to be passed to the init call *)
-                        let load = L.build_load elem_ptr (var ^ "_load") builder in
-
-                        acc @ [load]
-                )
-                []
-                capture) in
+    let llvmArgs = loadEnvExcept typEnv llvmEnv arg builder in
  
     (* call the llvm_init function with the llvmargs *)
     let local = L.build_alloca voidptr var builder in
@@ -297,26 +331,6 @@ let rec cppfunction (name : string)           (* name of the function *)
     let capture = (M.fold (fun k _ acc -> k :: acc) 
                    (M.add arg dummyScheme typEnv) 
                    []) in
-    let ccapture = sep ", *" capture in
-    let vcapture = sep ", void* " (remove arg capture) in
-    let vcapture = if (String.length vcapture) > 0 
-                   then "void* " ^ vcapture 
-                   else vcapture in
-
-    let currIndex = ref 0 in
-    let argIndex = ref 0 in
-    let assigns = 
-            List.fold_left 
-              (^) ""
-              (List.map (fun v -> (
-                  currIndex := !currIndex + 1;
-                  if v = arg then (
-                      argIndex := !currIndex;
-                      ""
-                  )
-                  else
-                    "\t*((void** ) reserved + " ^ (string_of_int !currIndex) ^ 
-                    ") = " ^ v ^ ";\n")) capture) in
 
 (*---------------------------------------------------------------------------*)  
     (* define the structure associated with this function *)
@@ -341,7 +355,8 @@ let rec cppfunction (name : string)           (* name of the function *)
     let _ = L.build_store struct_cast allocd_struct builder in
 
     (* store argument in "capture" *)
-    let _ = llvmAssignMember allocd_struct llvm_arg (!argIndex) builder in
+    let argIndex = 1 + find arg capture in
+    let _ = llvmAssignMember allocd_struct llvm_arg argIndex builder in
 
     (* insert the body of the call function *)
     let (e, te) = body in
@@ -368,20 +383,14 @@ let rec cppfunction (name : string)           (* name of the function *)
     let _ = L.build_store fn_call struct_cast builder in
 
     (* store function arguments into structure *)
-    let currIndex = ref 0 in
-    let currParam = ref params in
+    let captureIndex = zipWithIndex capture in
+    let captureFiltr = removeIndexed captureIndex arg in
+    let captureParam = zip captureFiltr params in
     let _ = (List.iter 
-                (fun v ->
-                    currIndex := !currIndex + 1;
-                    if v = arg 
-                    then ()
-                    else
-                        let (p :: ps) = !currParam in
-                        (* assign the argument to the member of the struct *)
-                        let _ = llvmAssignMember allocd_struct p !currIndex builder in
-                        currParam := ps;
-                )
-                capture) in
+                (fun ((_, currIndex), p) ->
+                    (* assign the argument to the member of the struct *)
+                    ignore(llvmAssignMember allocd_struct p currIndex builder)
+                ) captureParam) in
 
     (* load structure, cast it to void*, return it *)
     let struct_load = L.build_load allocd_struct "struct_load" builder in
@@ -390,6 +399,19 @@ let rec cppfunction (name : string)           (* name of the function *)
     
 (*---------------------------------------------------------------------------*)  
     (* C code generation *)
+    let ccapture = sep ", *" capture in
+    let vcapture = sep ", void* " (remove arg capture) in
+    let vcapture = if (String.length vcapture) > 0 
+                   then "void* " ^ vcapture 
+                   else vcapture in
+    let assigns = 
+            List.fold_left 
+              (^) ""
+              (List.map (fun (v, currIndex) -> (
+                  "\t*((void** ) reserved + " ^ (string_of_int currIndex) ^ 
+                  ") = " ^ v ^ ";\n")) 
+               captureFiltr) in
+
     (fn_init, 
     "struct " ^ (mangleName name) ^ "{\n\
          \tvoid* (*call)(void*, void*);\n\
@@ -398,7 +420,7 @@ let rec cppfunction (name : string)           (* name of the function *)
      void* " ^ (mangleCall name) ^ "(void* genenv, void* " ^ arg ^ "){\n\
          \tstruct " ^ (mangleName name) ^ 
                  " *env = (struct " ^ (mangleName name) ^ "* ) genenv;\n\
-         \t*((void** ) env + " ^ (string_of_int (!argIndex)) ^ ") = " ^ arg ^ ";\n"
+         \t*((void** ) env + " ^ (string_of_int argIndex) ^ ") = " ^ arg ^ ";\n"
              ^ code ^ 
          "\treturn " ^ evar ^ ";\n\
      }\n\
@@ -417,27 +439,6 @@ and fix (name : string) arg lambdaName typEnv body =
     let capture = (M.fold (fun k _ acc -> k :: acc) 
                    (M.add arg dummyScheme typEnv) 
                    []) in
-    let ccapture = sep ", *" capture in
-    let vcapture = sep ", void *" (remove arg capture) in
-    let vcapture = if String.length vcapture > 0
-                   then ", void*" ^ vcapture
-                   else vcapture
-    in
-
-    let currIndex = ref 0 in
-    let argIndex = ref 0 in
-    let assigns = 
-            List.fold_left 
-              (^) ""
-              (List.map (fun v -> (
-                  currIndex := !currIndex + 1;
-                  if v = arg then (
-                      argIndex := !currIndex;
-                      ""
-                  )
-                  else
-                    "\t*((void** ) env + " ^ (string_of_int !currIndex) ^ 
-                    ") = " ^ v ^ ";\n")) capture) in
 
 (*---------------------------------------------------------------------------*)  
     (* define the structure associated with this function *)
@@ -461,25 +462,20 @@ and fix (name : string) arg lambdaName typEnv body =
     let _ = L.build_store space allocd_struct builder in
     
     (* store function arguments into structure *)
-    let currIndex = ref 0 in
-    let currParam = ref params in
+    let captureIndex = zipWithIndex capture in
+    let captureFiltr = removeIndexed captureIndex arg in
+    let captureParam = zip captureFiltr params in
     let _ = (List.iter 
-                (fun v ->
-                    currIndex := !currIndex + 1;
-                    if v = arg 
-                    then ()
-                    else
-                        let (p :: ps) = !currParam in
-                        (* assign the argument to the member of the struct *)
-                        let _ = llvmAssignMember allocd_struct p !currIndex builder in
-                        currParam := ps;
-                )
-                capture) in
-    
+                (fun ((_, currIndex), p) ->
+                    (* assign the argument to the member of the struct *)
+                    ignore(llvmAssignMember allocd_struct p currIndex builder);
+                ) captureParam) in
+
     (* NULL assignment *)
+    let argIndex = 1 + find arg capture in
     let nullvar = L.build_alloca voidptr "_nullvar" builder in
     let _ = L.build_store (L.const_null voidptr) nullvar builder in
-    let _ = llvmAssignMember allocd_struct nullvar (!argIndex) builder in
+    let _ = llvmAssignMember allocd_struct nullvar argIndex builder in
 
     (* insert body of the call function *)
     let (e, te) = body in
@@ -490,8 +486,8 @@ and fix (name : string) arg lambdaName typEnv body =
     (* make the struct self-referential *)
     let _ = llvmAssignMember elvar elvar
                              (if not (M.mem lambdaName te)
-                              then 1 + !argIndex
-                              else !argIndex) builder in
+                              then 1 + argIndex
+                              else argIndex) builder in
 
     (* call apply function *)
     let (apply, _) = applyFunc in
@@ -507,6 +503,17 @@ and fix (name : string) arg lambdaName typEnv body =
 
 (*---------------------------------------------------------------------------*)  
      (* C code generation *)
+
+    let ccapture = sep ", *" capture in
+    let vcapture = pref ", void*" (remove arg capture) in
+    let assigns = 
+            List.fold_left 
+              (^) ""
+              (List.map (fun (v, currIndex) -> (
+                  "\t*((void** ) env + " ^ (string_of_int currIndex) ^ 
+                  ") = " ^ v ^ ";\n")) 
+               captureFiltr) in
+
     (fn_app, 
      "struct " ^ mangleEnv name ^ "{\n\
           \t void* (*call) (void*, void*);\n\
@@ -515,13 +522,13 @@ and fix (name : string) arg lambdaName typEnv body =
       void* " ^ mangleApp name ^ "(void* f" ^ vcapture ^ "){\n\
           \tstruct " ^ mangleEnv name ^ "* env = malloc(sizeof(*env));\n"
           ^ assigns ^
-         "\t*((void**) env + " ^ (string_of_int (!argIndex)) ^ ") = NULL;\n"
+         "\t*((void**) env + " ^ (string_of_int argIndex) ^ ") = NULL;\n"
           ^ codee   ^ 
          "\t*(void** )(" ^ evar ^ " + " 
                  (*^ string_of_int (1 + List.length capture) ^*)
                  ^ string_of_int (if not (M.mem lambdaName te)
-                                 then 1 + !argIndex
-                                 else !argIndex) ^
+                                 then 1 + argIndex
+                                 else argIndex) ^
                  " * sizeof(void* )) = " ^ evar ^ ";\n\
           \treturn apply(f, " ^ evar ^ ");\n\
       }\n"
@@ -664,6 +671,9 @@ and check (sexpr : sExpr)          (* expression to translate *)
     }
 (*---------------------------------------------------------------------------*)  
   | SIf (c, t, e)     ->
+    (* generate code that produces the condition,
+       the then value (wrapped in a lambda) and
+       the else value (wrapped in a lambda) *)
     let { code  = codec; 
           var   = cvar; 
           lvar  = clvar; } = check c typEnv llvmEnv builder in
@@ -698,10 +708,14 @@ and check (sexpr : sExpr)          (* expression to translate *)
   | SLambda (LVar(v), e) -> 
           let name = nextEntry lastClass in
           let typEnvNew = M.add v (Scheme([], Concrete "Int")) typEnv in
-
+          
+          (* generate the code for the structure,
+             its constructor and its call operator *)
           let (llvm_init, func_snippet) = cppfunction name v (e, typEnvNew) typEnv in
-          classes := !classes ^ func_snippet;
-
+          classes := !classes ^ 
+                     func_snippet;
+          
+          (* instantiate the function structure *)
           let var = "_" ^ (nextEntry lastTemp) in
           let (lvar, inst_snippet) = 
                cppfunctioninst var name llvm_init v typEnv llvmEnv builder in
@@ -711,20 +725,24 @@ and check (sexpr : sExpr)          (* expression to translate *)
           }
 (*---------------------------------------------------------------------------*)  
   | SCall (f, arg)       -> 
+          (* generate the code that produces the function *)
           let { code  = codef; 
                 var   = fvar; 
                 lvar  = flvar; } = check f typEnv llvmEnv builder in 
+          (* generate the code that produces the argument *)
           let { code  = codearg;
                 var   = argvar; 
                 lvar  = arglvar; } = check arg typEnv llvmEnv builder in
-          
+          (* call apply on the function and the argument *)
           let var = "_" ^ (nextEntry lastTemp) in
           let (local, apply_snippet) = callApply var 
                                                  fvar flvar 
                                                  argvar arglvar 
                                                  builder in
 
-          { code  = codef ^ codearg ^ apply_snippet;
+          { code  = codef ^ 
+                    codearg ^ 
+                    apply_snippet;
             var   = var;
             lvar  = local;
           }
@@ -732,26 +750,34 @@ and check (sexpr : sExpr)          (* expression to translate *)
   | SLet (SBinding(LVar(v), e, false), f) ->
           let name = nextEntry lastClass in
           let typEnvNew = M.add v (Scheme([], Concrete "Int")) typEnv in
-
-          let (llvm_init, snippet) = cppfunction name v (f, typEnvNew) typEnv in
-          classes := !classes ^ snippet;
-
+          
+          (* let v = e in f ---> (\v -> f)(e) *)
+          (* generate the code for the structure,
+             its constructor and its call operator *)
+          let (llvm_init, func_snippet) = cppfunction name v (f, typEnvNew) typEnv in
+          classes := !classes ^ 
+                     func_snippet;
+          
+          (* generate the code that produces e *)
           let { code  = codee; 
                 var   = evar; 
                 lvar  = elvar; } = check e typEnv llvmEnv builder in
-
+          
+          (* instantiate the function structure with capture *)
           let tmp = "_" ^ (nextEntry lastTemp) in
           let (ltmp, inst_snippet) = 
                      cppfunctioninst tmp name llvm_init v typEnv llvmEnv builder in
-
+          
+          (* apply e to the function *)
           let var = "_" ^ (nextEntry lastTemp) in
           let (local, apply_snippet) = callApply var 
                                                  tmp ltmp 
                                                  evar elvar 
                                                  builder in
 
-          let code = codee ^ inst_snippet ^ apply_snippet in
-          { code  = code;
+          { code  = codee ^
+                    inst_snippet ^
+                    apply_snippet;
             var   = var;
             lvar  = local;
           }
@@ -773,11 +799,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
         
         (* special code generation for recursive let-bindings *)
         let capture = (M.fold (fun k _ acc -> k :: acc) typEnv []) in
-        let acapture = sep ", env->" (remove v capture) in
-        let acapture = if String.length acapture > 0 
-                       then ", env->" ^ acapture
-                       else acapture
-        in
+        let acapture = pref ", env->" (remove v capture) in
                     
         let tmp = "_" ^ (nextEntry lastTemp) in
         let (ltmp, inst_snippet) = 
@@ -789,31 +811,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
 
         (* call apply function and store result *)
         let tmpload = L.build_load ltmp "_tmpload" builder in
-
-        let currIndex = ref 0 in
-        let llvmArgs = 
-                (List.fold_left 
-                (fun acc w ->
-                    currIndex := !currIndex + 1;
-                    if w = v
-                    then acc
-                    else
-                        let var = "_" ^ (nextEntry lastTemp) in
-                        (* load structure, cast it, index into it *)
-                        let struct_load = L.build_load llvmEnv "struct_load" builder in
-                        let struct_cast = L.build_bitcast struct_load 
-                                                  voidptrptr "struct_cast" builder in
-                        let elem_ptr    = L.build_in_bounds_gep struct_cast
-                                                  [| L.const_int i64_t (!currIndex) |]
-                                                  "elem_ptr" builder in
-                        (* load the result to be passed to the init call *)
-                        let load = L.build_load elem_ptr (var ^ "_load") builder in
-
-                        acc @ [load]
-                )
-                [tmpload]
-                capture) in
-
+        let llvmArgs = [tmpload] @ (loadEnvExcept typEnv llvmEnv v builder) in
         let call = L.build_call llvm_app (Array.of_list llvmArgs) "call" builder in
         let _ = L.build_store call local builder in
 

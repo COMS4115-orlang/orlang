@@ -18,7 +18,7 @@ let _ =
   
   let lexbuf = Lexing.from_channel stdin in
   let ast = Parser.topLevel Scanner.tokenize lexbuf in
-  let (prelude, env) = buildPrimitiveEnv in
+  let env = M.empty in
   let { tp    = _; 
         sexpr = sxp; 
         sub   = _; } = Semant.check ast env in

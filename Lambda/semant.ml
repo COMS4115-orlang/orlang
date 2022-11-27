@@ -96,7 +96,7 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
                 sub   = subc; } = check c typEnv in
           let typEnvNew = applyte subc typEnv in
           let (tU, subU) = unification tc (Concrete "Bool") in
-          let typEnvNew = applyte subU typEnv in
+          let typEnvNew = applyte subU typEnvNew in
           let sub = compose subc subU in
           let { tp    = tt;
                 sexpr = st;
