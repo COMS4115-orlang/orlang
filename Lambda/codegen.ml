@@ -142,8 +142,11 @@ let llvmAssignMember (allocd_struct : L.llvalue) (* llvalue of structure *)
 let applyFunc : (L.llvalue *   (* llvalue of the apply function *)
                  string) =     (* C code associated with it *)
     (* function signature and param space *)
-    let (func, builder, [f; arg]) = 
-        llvmFuncDef "_apply" ["f"; "arg"] in
+    let (func, builder, f, arg) = 
+        (match llvmFuncDef "_apply" ["f"; "arg"] with
+         | (func, builder, [f; arg]) -> (func, builder, f, arg)
+         | _ -> assert false)
+    in
 
     (* load ptrptr f *)
     let f_load = L.build_load f "f_load" builder in 
@@ -190,8 +193,11 @@ let callApply (var : string)          (* name of result *)
 let ifFunc : (L.llvalue *   (* llvalue of the if function *)
               string) =     (* C code associated with it *)
     (* function signature and param space *)
-    let (func, builder, [c; t; e]) = 
-        llvmFuncDef "_if_func" ["c"; "t"; "e"] in
+    let (func, builder, c, t, e) = 
+        (match llvmFuncDef "_if_func" ["c"; "t"; "e"] with
+         | (func, builder, [c; t; e]) -> (func, builder, c, t, e)
+         | _ -> assert false)
+    in
 
     let nullvar = L.build_alloca voidptr "_nullvar" builder in
     let _ = L.build_store (L.const_null voidptr) nullvar builder in
@@ -346,7 +352,11 @@ let rec cppfunction (name : string)           (* name of the function *)
     (* define the call function and allocate space for params *)
     let (fn_call, builder, params) = llvmFuncDef (mangleCall name) ["genenv"; "arg"] in
     
-    let (llvm_genenv :: llvm_arg :: []) = params in
+    let (llvm_genenv, llvm_arg) = 
+        (match params with
+         | [llvm_genenv; llvm_arg] -> (llvm_genenv, llvm_arg)
+         | _ -> assert false)
+    in
 
     (* cast struct *)
     let allocd_struct = L.build_alloca strptrT "env" builder in
@@ -454,7 +464,11 @@ and fix (name : string) arg lambdaName typEnv body =
     (* define the call function and allocate space for params *)
     let (fn_app, builder, params) = llvmFuncDef (mangleApp name) 
                         (List.append ["f"] (remove arg capture)) in
-    let (f :: params) = params in
+    let (f, params) = 
+        (match params with
+         | (f :: params) -> (f, params)
+         | _ -> assert false)
+    in
 
     (* malloc structure and cast it *)
     let allocd_struct = L.build_alloca strptrT "env" builder in
@@ -785,7 +799,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
   | SLet (SBinding(LVar(v), e, _), f)  ->
         let w = (match e with
                  | (_, SLambda(LVar(w), _)) -> w
-                 | _ -> raise(Failure("Impossible")))
+                 | _ -> assert false)
         in
         let name = nextEntry lastClass in
         let typEnvNew = M.add v (Scheme ([], Concrete "Int")) typEnv in

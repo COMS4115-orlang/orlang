@@ -111,7 +111,11 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
           let (tU, subU) = unification (apply sube tU) te in
           let sub = compose (compose sub sube) subU in
 
-          let ArrowTyp(_, tp) = tU in
+          let tp = 
+              (match tU with
+               | ArrowTyp(_, tp) -> tp
+               | _ -> assert false)
+          in
           { tp    = tp;
             sexpr = (tp, SIf(sc, st, se));
             sub   = sub;
