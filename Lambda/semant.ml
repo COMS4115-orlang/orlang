@@ -26,6 +26,46 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
               }
           else raise (Failure("use of undefined variable " ^ s))
 (*---------------------------------------------------------------------------*)  
+  | NoHint(ListLit(lst)) ->
+          if (List.length lst) = 0
+          then raise (Failure("Empty list not supported"))
+          else
+            let rec checkHomogeneous tpList =
+                (match tpList with
+                  | x::y::xs  -> (x = y) && checkHomogeneous (y::xs)  
+                  | _         -> true)
+            in
+            let checkedList = List.map (fun e -> check e typEnv) lst in
+            if checkHomogeneous (List.map (fun c -> c.tp) checkedList)
+            then
+                let checked = List.hd checkedList in
+                let sexprList = List.map (fun x -> x.sexpr) checkedList in
+                { tp    = checked.tp;
+                  sexpr = (checked.tp, SListLit sexprList);
+                  sub   = checked.sub;
+                }
+            else raise (Failure("List type is not homogeneous"))
+   | Hint(ListLit(lst), _) ->
+          if (List.length lst) = 0
+          then raise (Failure("Empty list not supported"))
+          else
+            let rec checkHomogeneous tpList =
+                (match tpList with
+                  | x::y::xs  -> (x = y) && checkHomogeneous (y::xs)  
+                  | _         -> true)
+            in
+            let checkedList = List.map (fun e -> check e typEnv) lst in
+            if checkHomogeneous (List.map (fun c -> c.tp) checkedList)
+            then
+                let checked = List.hd checkedList in
+                let sexprList = List.map (fun x -> x.sexpr) checkedList in
+                { tp    = checked.tp;
+                  sexpr = (checked.tp, SListLit sexprList);
+                  sub   = checked.sub;
+                }
+            else raise (Failure("List type is not homogeneous"))
+          
+(*---------------------------------------------------------------------------*)  
   | NoHint(Binop(b, e, f))      -> 
           check (Hint(Binop(b, e, f), nextTypVar last)) typEnv
   | Hint(Binop(b, e, f), t)     ->

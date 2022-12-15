@@ -22,7 +22,7 @@ let _ =
   let { tp    = _; 
         sexpr = sxp; 
         sub   = _; } = Semant.check ast env in
-
+  
   (* define main function *)
   let ftyp = L.function_type i32_t [||] in
   let func = L.define_function "main" ftyp the_module in

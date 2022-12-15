@@ -14,6 +14,7 @@ type unop = NOT
 type expr =
     IntLit of int
   | BoolLit of int
+  | ListLit of hExpr list
   | Binop of binop * hExpr * hExpr
   | Unop of unop * hExpr
   | Var of string
@@ -39,11 +40,12 @@ and pattern =
 type scheme =
   | Scheme of string list * typ
 
-(* semantically checked expression; everything in orlang is an exprssion *)
+(* semantically checked expression; everything in orlang is an expression *)
 type sExpr = typ * sx 
 and sx =
     SIntLit of int
   | SBoolLit of int
+  | SListLit of sExpr list
   | SBinop of binop * sExpr * sExpr
   | SUnop of unop * sExpr
   | SIf of sExpr * sExpr * sExpr

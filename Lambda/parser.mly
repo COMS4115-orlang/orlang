@@ -126,11 +126,11 @@ expr:
 | BNOT  expr                 { NoHint(Unop(NOT, $2)) }
 | IF expr THEN expr ELSE expr { NoHint(If($2, $4, $6)) }
 | MATCH expr WITH patternMatrix SEMICOLON { NoHint(PatternMatch($2, $4)) }
-| LBRACKET lst RBRACKET       { (*TODO*) NoHint(IntLit(0)) }
+| LBRACKET lst RBRACKET       { NoHint(ListLit($2)) }
 
 lst:
-| expr                        { (*TODO*) NoHint(IntLit(0)) }
-| expr COMMA lst              { (*TODO*) NoHint(IntLit(0)) }
+| expr                        { [$1] }
+| expr COMMA lst              { ($1)::($3) }
 
 exprList:
 | expr                { [$1] }
