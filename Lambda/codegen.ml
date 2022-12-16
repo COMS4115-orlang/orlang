@@ -611,17 +611,18 @@ and check (sexpr : sExpr)          (* expression to translate *)
 (*---------------------------------------------------------------------------*)  
   | SListLit (lst)         ->
           let var = "_" ^ (nextEntry lastTemp) in
-          let local = L.build_alloca voidptr var builder in
-          let elems = List.fold_right (fun e values ->
-            let v = check e typEnv llvmEnv builder in v.lvar::values) lst [] in
-          let fstelem = List.hd elems in
-          let elemtype = L.type_of (fstelem) in
+          let elems = List.map (fun e -> let v = check e typEnv llvmEnv builder in v) lst in
           let n = List.length lst in
-          let ptr = L.build_array_malloc elemtype (L.const_int i32_t n) "" builder in
-          let _ = (List.fold_left (fun i elem -> let idx = L.const_int i32_t i in
-                                              let eptr = L.build_gep ptr [|idx|] "" builder in
-                                              ignore (L.build_store elem eptr builder); i+1 ) 0 elems)
+          let local = L.build_array_alloca voidptr (L.const_int i64_t n) var builder in
+          let rec allocEach elems i = 
+              match elems with
+              | [] -> ()
+              | e::es -> let eptr = L.build_gep local [|(L.const_int i64_t i)|] "" builder in
+                         let eload = L.build_load e.lvar  "_eload" builder in
+                         ignore (L.build_store eload eptr builder);
+                         allocEach es (i + 1)
           in
+          let _ = allocEach elems 0 in
           { code  = ""; (* add later? *)
             var   = var;
             lvar  = local;
