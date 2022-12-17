@@ -18,7 +18,6 @@ rule tokenize = parse
 | "&&"  { BAND }
 | "||"  { BOR }
 | "!"   { BNOT }
-| "!!"  { BANGBANG }
 | '\\'  { LAMBDA }
 | "->"  { ARROW }
 | ":"   { COLON }

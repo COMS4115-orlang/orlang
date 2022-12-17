@@ -30,11 +30,10 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
           if (List.length lst) = 0
           then raise (Failure("Empty list not supported"))
           else
-            let rec checkHomogeneous tpList =
+            let checkHomogeneous tpList =
                 (match tpList with
-                  | x::y::xs  -> (x = y) && checkHomogeneous (y::xs)  
-                  | _         -> true)
-            in
+                | x::xs -> ignore(List.map (fun t -> unification x t)); true
+                | _     -> true) in
             let checkedList = List.map (fun e -> check e typEnv) lst in
             if checkHomogeneous (List.map (fun c -> c.tp) checkedList)
             then
@@ -98,16 +97,17 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
             sexpr = (returnT, SBinop(b, se, sf));
             sub   = sub;
           }
-  | NoHint(Listop(b, e, f)) ->
+  | NoHint(LCons(e, f)) ->
           let { tp = te;
                 sexpr = se;
                 sub = sube; } = check e typEnv in
           let { tp = tf;
                 sexpr = sf;
                 sub = subf; } = check f typEnv in
-          { tp = te;
-            sexpr = (te, SListop(INDEX, se, sf));
-            sub = sube;
+          let (tpl, subl) = unification te tf in
+          { tp = tpl;
+            sexpr = (te, SLCons(se, sf));
+            sub = subl;
           }
 (*---------------------------------------------------------------------------*)  
   | NoHint(Unop(b, e))      -> 

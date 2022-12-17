@@ -129,7 +129,7 @@ expr:
 | expr MOD   expr            { NoHint(Binop(MOD, $1, $3)) }
 | expr BAND  expr            { NoHint(Binop(AND, $1, $3)) }
 | expr BOR   expr            { NoHint(Binop(OR, $1, $3)) }
-| expr BANGBANG expr         { NoHint(Listop(INDEX, $1, $3)) }
+| expr COLON expr            { NoHint(LCons($1, $3)) }
 | expr DOUBLEEQUALS   expr   { NoHint(Binop(EQ, $1, $3)) }
 | BNOT  expr                 { NoHint(Unop(NOT, $2)) }
 | IF expr THEN expr ELSE expr { NoHint(If($2, $4, $6)) }
