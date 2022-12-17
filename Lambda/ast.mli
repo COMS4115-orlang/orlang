@@ -9,6 +9,7 @@ type typ =
   | ArrowTyp of typ * typ
 
 type binop = ADD | SUB | MLT | DIV | MOD | AND | OR | EQ
+type listop = INDEX
 type unop = NOT
 
 type expr =
@@ -16,6 +17,7 @@ type expr =
   | BoolLit of int
   | ListLit of hExpr list
   | Binop of binop * hExpr * hExpr
+  | Listop of listop * hExpr * hExpr
   | Unop of unop * hExpr
   | Var of string
   | Call of hExpr * hExpr
@@ -28,8 +30,10 @@ and hExpr =
   | Hint of expr * typ
 and binding = 
     Binding of lvalue * hExpr * bool
+  | MBinding of (lvalue list) * hExpr
+  | CBinding of (lvalue list) * hExpr
 and patternRow = 
-  | PatternRow of pattern * hExpr
+    PatternRow of pattern * hExpr
 and pattern = 
     PatWildCard
   | PatId of string
@@ -48,6 +52,7 @@ and sx =
   | SListLit of sExpr list
   | SBinop of binop * sExpr * sExpr
   | SUnop of unop * sExpr
+  | SListop of listop * sExpr * sExpr
   | SIf of sExpr * sExpr * sExpr
   | SVar of string
   | SCall of sExpr * sExpr
@@ -55,4 +60,5 @@ and sx =
   | SLet of sbinding * sExpr
 and sbinding = 
     SBinding of lvalue * sExpr * bool
-
+  | SMBinding of (lvalue list) * sExpr
+  | SCBinding of (lvalue list) * sExpr

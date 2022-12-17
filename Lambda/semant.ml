@@ -64,8 +64,7 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
                   sub   = checked.sub;
                 }
             else raise (Failure("List type is not homogeneous"))
-          
-(*---------------------------------------------------------------------------*)  
+  (*---------------------------------------------------------------------------*)  
   | NoHint(Binop(b, e, f))      -> 
           check (Hint(Binop(b, e, f), nextTypVar last)) typEnv
   | Hint(Binop(b, e, f), t)     ->
@@ -98,6 +97,17 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
           { tp    = returnT;
             sexpr = (returnT, SBinop(b, se, sf));
             sub   = sub;
+          }
+  | NoHint(Listop(b, e, f)) ->
+          let { tp = te;
+                sexpr = se;
+                sub = sube; } = check e typEnv in
+          let { tp = tf;
+                sexpr = sf;
+                sub = subf; } = check f typEnv in
+          { tp = te;
+            sexpr = (te, SListop(INDEX, se, sf));
+            sub = sube;
           }
 (*---------------------------------------------------------------------------*)  
   | NoHint(Unop(b, e))      -> 
@@ -311,5 +321,18 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
           sexpr = (retTyp, SLet (SBinding (LVar (v), esexpr, true), fsexpr));
           sub   = compose sub sub3;
         }
-
-  | _ -> raise(Failure("Semantic checking for pattern matching not implemented yet"))
+(*---------------------------------------------------------------------------*)  
+(*
+  | NoHint(Let (MBinding(leftLst, e), f)) ->
+        let rightLst = (match e with
+                        | ListLit(lst) -> lst
+                        | _            -> raise (Failure("RHS not a list/tuple"))) in
+        if (List.length leftList) <> (List.length rightList)
+        then raise(Failure("Unequal number of elements"))
+        else
+            
+  (*| Hint(Let *)
+  | Hint(Let (Binding(LVar(v), e, false), f), t) ->
+TODO: M and C Binding *)
+(*---------------------------------------------------------------------------*)  
+ | _ -> raise(Failure("Semantic checking for pattern matching not implemented yet"))

@@ -613,19 +613,45 @@ and check (sexpr : sExpr)          (* expression to translate *)
           let var = "_" ^ (nextEntry lastTemp) in
           let elems = List.map (fun e -> let v = check e typEnv llvmEnv builder in v) lst in
           let n = List.length lst in
-          let local = L.build_array_alloca voidptr (L.const_int i64_t n) var builder in
-          let rec allocEach elems i = 
-              match elems with
-              | [] -> ()
-              | e::es -> let eptr = L.build_gep local [|(L.const_int i64_t i)|] "" builder in
-                         let eload = L.build_load e.lvar  "_eload" builder in
-                         ignore (L.build_store eload eptr builder);
-                         allocEach es (i + 1)
+          let local = L.build_array_alloca voidptr (L.const_int i64_t (2*n+3)) var builder in
+
+          (* store null pointer in local *)
+          let nullp = L.build_inttoptr (L.const_null i64_t) voidptr "_null" builder in
+          let _ = L.build_store nullp local builder in
+
+          (* store pointer to first element in local+1, cast to voidptr *)
+          let sptr  = L.build_gep local [|(L.const_int i64_t 1)|] "_sptr" builder in
+          let npptr = L.build_pointercast sptr voidptr "_npptr" builder in
+          let _     = L.build_store npptr sptr builder in
+
+          let linkList a b = 
+              let (sptr, nptr) = b in
+              let sptr'   = L.build_gep sptr [|(L.const_int i64_t 1)|] "" builder in
+              let sptr''  = L.build_gep sptr [|(L.const_int i64_t 2)|] "" builder in
+              let avptr = L.build_pointercast a.lvar voidptr "_avptr" builder in
+              let nvptr = L.build_pointercast nptr voidptr "_nvptr" builder in
+              let _ = L.build_store avptr sptr builder in
+              let _ = L.build_store nvptr sptr' builder in
+              (sptr'', sptr)
           in
-          let _ = allocEach elems 0 in
+          let (_, sptr) = List.fold_right linkList elems (sptr, local) in
+
+          (*
+          (* increment to get next pointer *)
+          (* repeat *)
+          let sptr'   = L.build_gep sptr [|(L.const_int i64_t 1)|] "" builder in
+          let sptrval = L.build_load sptr' "_sptrval" builder in (* get pointer to val *)
+          let vptr' = L.build_pointercast sptrval voidptrptr "_vptr" builder in (* cast to void** for some reason *)
+          (* end repeat *)
+
+          (* get element *)
+          let sptrval' = L.build_load vptr' "_sptrval" builder in (* get pointer to val *)
+          let vptr = L.build_pointercast sptrval' voidptrptr "_vptr" builder in (* cast to void** for some reason *)
+          *)
+
           { code  = ""; (* add later? *)
             var   = var;
-            lvar  = local;
+            lvar  = sptr;
           }
 (*---------------------------------------------------------------------------*)  
   | SBinop (b, e, f)     ->
@@ -672,6 +698,49 @@ and check (sexpr : sExpr)          (* expression to translate *)
              codef ^ 
 	         "\tvoid* " ^ var ^ " = (void* ) ((long long)((long long) " ^ evar ^ " " 
                         ^ sym ^ " (long long) " ^ fvar ^ "));\n";
+      var  = var;
+      lvar = local;
+    }
+(*---------------------------------------------------------------------------*)  
+  | SListop (b, e, f)     ->
+    let { code  = codee; 
+          var   = evar; 
+          lvar  = elvar; } = check e typEnv llvmEnv builder in
+    let { code  = codef;
+          var   = fvar; 
+          lvar  = flvar; } = check f typEnv llvmEnv builder in
+    let sym = (match b with
+              | INDEX -> "!!") in
+    let var = "_" ^ (nextEntry lastTemp) in
+
+    (* load vars and cast them to long long *)
+    
+    (* apply binary operator and store result *)
+    let local = L.build_alloca voidptr var builder in
+    let listop_index lptr iptr = 
+        (* listop indexing *)
+
+        (*
+        (* increment to get next pointer *)
+        (* repeat *)
+        let sptr'   = L.build_gep sptr [|(L.const_int i64_t 1)|] "" builder in
+        let sptrval = L.build_load sptr' "_sptrval" builder in (* get pointer to val *)
+        let vptr' = L.build_pointercast sptrval voidptrptr "_vptr" builder in (* cast to void** for some reason *)
+        (* end repeat *)
+
+        (* get element *)
+        let sptrval' = L.build_load vptr' "_sptrval" builder in (* get pointer to val *)
+        let vptr = L.build_pointercast sptrval' voidptrptr "_vptr" builder in (* cast to void** for some reason *)
+        *)
+        (L.const_int i64_t 90)
+    in
+    let res = (match b with
+              | INDEX -> listop_index elvar flvar
+              ) in
+    let rescast = L.build_inttoptr res voidptr "_rescast" builder in
+    let _ = L.build_store rescast local builder in
+
+    { code = ""; (* add later *)
       var  = var;
       lvar = local;
     }

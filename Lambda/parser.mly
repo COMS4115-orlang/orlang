@@ -8,12 +8,12 @@
 %token LBRACKET RBRACKET COMMA
 %token LAMBDA ARROW
 
-%token PLUS MINUS TIMES DIV MOD
+%token PLUS MINUS TIMES DIV MOD BANGBANG
 
 %token LET REC EQUALS WHERE AND IN
 %token IF THEN ELSE
 %token EOF
-%token VAL COLON
+%token VAL COLON DCOLON
 %token TRUE FALSE 
 
 %token BAND BOR BNOT DOUBLEEQUALS
@@ -27,9 +27,11 @@
 %left ELSE
 %left IN
 %left COLON
+%left DCOLON
 %left DOUBLEEQUALS
 %left BAND BOR
 %left BNOT
+%left BANGBANG
 %left PLUS MINUS
 %left TIMES DIV MOD
 
@@ -93,6 +95,9 @@ binding:
 | VARIABLE EQUALS expr        { Binding(LVar($1), $3, false) }
 | VARIABLE binding            { let Binding(v, e, _) = $2
                                 in Binding(LVar($1), NoHint(Lambda(v, e)), false) }
+| LPAREN multVars RPAREN EQUALS expr   { MBinding($2, $5) }
+| LPAREN consVars RPAREN EQUALS expr   { CBinding($2, $5) }
+
 
 typeAnn:
 | VAL VARIABLE COLON monoType { ($2, $4) }
@@ -102,6 +107,8 @@ monoType:
 | TYPEVAR                     { TypVar($1) }
 | LPAREN monoType RPAREN      { $2 }
 | monoType ARROW monoType     { ArrowTyp($1, $3) }
+
+
 
 expr:
 | call                        { $1 }
@@ -122,11 +129,20 @@ expr:
 | expr MOD   expr            { NoHint(Binop(MOD, $1, $3)) }
 | expr BAND  expr            { NoHint(Binop(AND, $1, $3)) }
 | expr BOR   expr            { NoHint(Binop(OR, $1, $3)) }
+| expr BANGBANG expr         { NoHint(Listop(INDEX, $1, $3)) }
 | expr DOUBLEEQUALS   expr   { NoHint(Binop(EQ, $1, $3)) }
 | BNOT  expr                 { NoHint(Unop(NOT, $2)) }
 | IF expr THEN expr ELSE expr { NoHint(If($2, $4, $6)) }
 | MATCH expr WITH patternMatrix SEMICOLON { NoHint(PatternMatch($2, $4)) }
 | LBRACKET lst RBRACKET       { NoHint(ListLit($2)) }
+
+multVars:
+| VARIABLE COMMA multVars { (LVar($1))::($3) }
+| VARIABLE                { [LVar($1)] }
+
+consVars:
+| VARIABLE DCOLON consVars { (LVar($1))::($3) }
+| VARIABLE                 { [LVar($1)] }
 
 lst:
 | expr                        { [$1] }

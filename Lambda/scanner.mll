@@ -18,9 +18,11 @@ rule tokenize = parse
 | "&&"  { BAND }
 | "||"  { BOR }
 | "!"   { BNOT }
+| "!!"  { BANGBANG }
 | '\\'  { LAMBDA }
 | "->"  { ARROW }
 | ":"   { COLON }
+| "::"  { DCOLON }
 | "val" { VAL }
 | "let" { LET }
 | "rec" { REC }
