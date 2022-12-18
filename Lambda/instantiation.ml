@@ -33,9 +33,10 @@ let instantiate (sch : scheme) : typ =
 
 (* returns a set of type variables appearing in a type *)
 let rec typVars : typ -> S.t = function
-    Concrete _ -> S.empty
-  | TypVar s -> S.singleton s
+    Concrete _     -> S.empty
+  | TypVar s       -> S.singleton s
   | ArrowTyp(a, b) -> S.union (typVars a) (typVars b)
+  | ListTyp t      -> typVars t
 
 (* generalize a type by making a forall for each tv which is not in typEnv *)
 let generalize (tp : typ) (typEnv : typeEnvironm) (var : string) : scheme = 

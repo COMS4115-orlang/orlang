@@ -7,6 +7,7 @@ type typ =
     Concrete of string
   | TypVar of string
   | ArrowTyp of typ * typ
+  | ListTyp of typ
 
 type binop = ADD | SUB | MLT | DIV | MOD | AND | OR | EQ
 type unop = NOT
