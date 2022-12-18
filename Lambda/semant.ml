@@ -97,6 +97,7 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
             sexpr = (returnT, SBinop(b, se, sf));
             sub   = sub;
           }
+(*---------------------------------------------------------------------------*)  
   | NoHint(LCons(e, f)) ->
           let { tp = te;
                 sexpr = se;
@@ -107,6 +108,16 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
           let (tpl, subl) = unification te tf in
           { tp = tpl;
             sexpr = (te, SLCons(se, sf));
+            sub = subl;
+          }
+(*---------------------------------------------------------------------------*)  
+  | NoHint(LLen(e)) ->
+          let { tp = te;
+                sexpr = se;
+                sub = sube; } = check e typEnv in
+          let (tpl, subl) = unification (Concrete "Int") te in
+          { tp = tpl;
+            sexpr = (te, SLLen(se));
             sub = subl;
           }
 (*---------------------------------------------------------------------------*)  

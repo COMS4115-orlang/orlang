@@ -135,6 +135,7 @@ expr:
 | IF expr THEN expr ELSE expr { NoHint(If($2, $4, $6)) }
 | MATCH expr WITH patternMatrix SEMICOLON { NoHint(PatternMatch($2, $4)) }
 | LBRACKET lst RBRACKET       { NoHint(ListLit($2)) }
+| GUARD expr GUARD            { NoHint(LLen($2)) }
 
 multVars:
 | VARIABLE COMMA multVars { (LVar($1))::($3) }

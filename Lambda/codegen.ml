@@ -975,6 +975,46 @@ and check (sexpr : sExpr)          (* expression to translate *)
       lvar = resptr;
     }
 (*---------------------------------------------------------------------------*)  
+  | SLLen (e)    ->
+    let { code  = codee; 
+          var   = evar; 
+          lvar  = elvar; } = check e typEnv llvmEnv builder in
+    let var = "_" ^ (nextEntry lastTemp) in
+
+    let rec getlength ptr i = 
+let parg = L.build_ptrtoint ptr i64_t "_parg" builder in
+let formatString = L.const_stringz context "%lld\n" in
+let global = L.define_global "formatString" formatString the_module in
+let _ = L.set_unnamed_addr true global in
+let printf = L.declare_function "printf" (L.var_arg_function_type i32_t [|voidptr|])
+                             the_module in
+(* call printf *)
+let castglobal = L.build_in_bounds_gep global
+               [|L.const_int i64_t 0; L.const_int i64_t 0|]
+               "_castglobal" builder in
+let _ = L.build_call printf [| castglobal; parg|] "_" builder in
+        if (i > 2) || (L.is_null ptr)
+        then
+            i
+        else
+            let ptr'   = L.build_gep ptr [|(L.const_int i64_t 1)|] "" builder in
+            let fload = L.build_load ptr' "" builder in
+            let flptr = L.build_pointercast fload voidptrptr "_avptr" builder in
+            getlength flptr (i+1)
+    in
+    let length = getlength elvar 0 in
+              
+    let local = L.build_alloca voidptr var builder in
+    let const = L.build_inttoptr (L.const_int i64_t length) 
+                                 voidptr
+                                 "const" builder in
+    let _ = L.build_store const local builder in
+
+    { code = "";
+      var  = var;
+      lvar = local;
+    }
+(*---------------------------------------------------------------------------*)  
   | SUnop (b, e)     ->
     let { code  = codee; 
           var   = evar; 

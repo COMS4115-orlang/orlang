@@ -17,6 +17,7 @@ type expr =
   | ListLit of hExpr list
   | Binop of binop * hExpr * hExpr
   | LCons of hExpr * hExpr
+  | LLen of hExpr
   | Unop of unop * hExpr
   | Var of string
   | Call of hExpr * hExpr
@@ -52,6 +53,7 @@ and sx =
   | SBinop of binop * sExpr * sExpr
   | SUnop of unop * sExpr
   | SLCons of sExpr * sExpr
+  | SLLen of sExpr
   | SIf of sExpr * sExpr * sExpr
   | SVar of string
   | SCall of sExpr * sExpr
