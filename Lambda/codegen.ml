@@ -993,7 +993,7 @@ let castglobal = L.build_in_bounds_gep global
                [|L.const_int i64_t 0; L.const_int i64_t 0|]
                "_castglobal" builder in
 let _ = L.build_call printf [| castglobal; parg|] "_" builder in
-        if (i > 2) || (L.is_null ptr)
+        if (i = 2) || (L.is_null ptr)
         then
             i
         else
