@@ -22,6 +22,12 @@ all_tests: build
 	-./test.sh 17
 	-./test.sh 18
 	-./test.sh 19
+	-./test.sh 20
+	-./test.sh 21
+	-./test.sh 22
+	-./test.sh 23
+	-./test.sh 24
+	-./test.sh 25
 	
 .PHONY : test
 test:

@@ -145,6 +145,7 @@ consVars:
 | VARIABLE                 { [LVar($1)] }
 
 lst:
+|                             { [] }
 | expr                        { [$1] }
 | expr COMMA lst              { ($1)::($3) }
 

@@ -1,0 +1,6 @@
+let main = 
+  let lst1 = [4115, 4116, 4117, 4118] in
+  let newStuff = 4119 in
+  let lst = newStuff:lst1 in
+  let (a::b::xs) = lst in
+  a + b

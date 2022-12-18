@@ -1,0 +1,4 @@
+let main = 
+  let lst = 4115:[4116, 4117] in
+  let (x::xs) = lst in
+  x
