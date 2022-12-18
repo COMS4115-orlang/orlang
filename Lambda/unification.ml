@@ -26,6 +26,8 @@ let rec apply (sub : substitution) (tp : typ) : typ =
           else tp
   | ArrowTyp (a, b) ->
           ArrowTyp (apply sub a, apply sub b)
+  | ListTyp t ->
+          ListTyp (apply sub t)
 
 (* apply a substitution to a type environment *)
 let applyte (sub : substitution) (typEnv : typeEnvironm) : typeEnvironm = 
@@ -48,12 +50,14 @@ let rec occurs (str : string) (tp : typ) : bool =
   | Concrete _     -> false
   | TypVar t       -> (t = str)
   | ArrowTyp(a, b) -> (occurs str a) || (occurs str b)
+  | ListTyp t      -> occurs str t
 
-(* converts a type to a string for pretty print *)
+  (* converts a type to a string for pretty print *)
 let rec toString : typ -> string = function
   | Concrete s     -> s
   | TypVar s       -> s
   | ArrowTyp(a, b) -> "(" ^ (toString a) ^ ") -> (" ^ (toString b) ^ ")"
+  | ListTyp t      -> "List " ^ (toString t)
 
 (* unify two types; return the unified type and the substitution *)
 let rec unification (t1 : typ) (t2 : typ) : (typ * substitution) = 
@@ -89,3 +93,16 @@ let rec unification (t1 : typ) (t2 : typ) : (typ * substitution) =
           if occurs s2 t1
           then raise (Failure("infinite type"))
           else (t1, M.add s2 t1 M.empty)
+  | (Concrete _, ListTyp _) ->
+          raise (Failure("Cannot unify concrete type " ^ (toString t1) ^ " with list type " ^ (toString t2)))
+  | (ListTyp _, Concrete _) ->
+          raise (Failure("Cannot unify list type " ^ (toString t1) ^ " with concrete type " ^ (toString t2)))
+  | (ListTyp t, TypVar s) ->
+          let sub = M.add s t1 M.empty in
+          (t1, sub)   
+  | (TypVar s, ListTyp _) ->
+          let sub = M.add s t2 M.empty in
+          (t2, sub)
+  | (ListTyp t1, ListTyp t2) ->
+          let (ut, sub) = unification t1 t2 in
+          (ListTyp ut, sub)

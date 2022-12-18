@@ -27,24 +27,8 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
           else raise (Failure("use of undefined variable " ^ s))
 (*---------------------------------------------------------------------------*)  
   | NoHint(ListLit(lst)) ->
-          if (List.length lst) = 0
-          then raise (Failure("Empty list not supported"))
-          else
-            let checkHomogeneous tpList =
-                (match tpList with
-                | x::xs -> ignore(List.map (fun t -> unification x t) xs); true
-                | _     -> true) in
-            let checkedList = List.map (fun e -> check e typEnv) lst in
-            if checkHomogeneous (List.map (fun c -> c.tp) checkedList)
-            then
-                let checked = List.hd checkedList in
-                let sexprList = List.map (fun x -> x.sexpr) checkedList in
-                { tp    = checked.tp;
-                  sexpr = (checked.tp, SListLit sexprList);
-                  sub   = checked.sub;
-                }
-            else raise (Failure("List type is not homogeneous"))
-   | Hint(ListLit(lst), _) ->
+          check (Hint(ListLit(lst), nextTypVar last)) typEnv 
+  | Hint(ListLit(lst), t) ->
           if (List.length lst) = 0
           then raise (Failure("Empty list not supported"))
           else
@@ -56,11 +40,12 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
             let checkedList = List.map (fun e -> check e typEnv) lst in
             if checkHomogeneous (List.map (fun c -> c.tp) checkedList)
             then
-                let checked = List.hd checkedList in
+                let checkedElem = List.hd checkedList in
+                let (lstTyp, lstSub)  = unification (ListTyp checkedElem.tp) t in
                 let sexprList = List.map (fun x -> x.sexpr) checkedList in
-                { tp    = checked.tp;
-                  sexpr = (checked.tp, SListLit sexprList);
-                  sub   = checked.sub;
+                { tp    = lstTyp;
+                  sexpr = (lstTyp, SListLit sexprList);
+                  sub   = lstSub;
                 }
             else raise (Failure("List type is not homogeneous"))
   (*---------------------------------------------------------------------------*)  
@@ -98,16 +83,19 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
             sub   = sub;
           }
   | NoHint(LCons(e, f)) ->
+          check (Hint(LCons(e, f), nextTypVar last)) typEnv
+  | Hint(LCons(e, f), t) ->
           let { tp = te;
                 sexpr = se;
                 sub = sube; } = check e typEnv in
           let { tp = tf;
                 sexpr = sf;
                 sub = subf; } = check f typEnv in
-          let (tpl, subl) = unification te tf in
-          { tp = tpl;
+          let (tpl, subl) = unification (ListTyp te) tf in
+          let (tph, subh) = unification tpl t in
+          { tp = tph;
             sexpr = (te, SLCons(se, sf));
-            sub = subl;
+            sub = subh;
           }
 (*---------------------------------------------------------------------------*)  
   | NoHint(Unop(b, e))      -> 
