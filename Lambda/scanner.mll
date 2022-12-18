@@ -1,12 +1,21 @@
 { open Parser }
 
+let digit = ['0'-'9']
+let sign = ('+'|'-')?
+let expon = ('e'|'E') sign digit+
+let dec = '.'
+
 rule tokenize = parse
 | [' ' '\t' '\r' '\n'] { tokenize lexbuf }
 | "(*"  { comment 1 lexbuf }
 | '+'   { PLUS }
+| "+."  { FPLUS }
 | '-'   { MINUS }
+| "-."  { FMINUS }
 | '*'   { TIMES }
+| "*."  { FTIMES }
 | '/'   { DIV }
+| "/."  { FDIV }
 | '%'   { MOD }
 | '('   { LPAREN }
 | ')'   { RPAREN }
@@ -35,9 +44,13 @@ rule tokenize = parse
 | "with" { WITH }
 | "|"   { GUARD }
 | ";"   { SEMICOLON }
-| ['0'-'9']+ as lit { LITERAL(int_of_string lit) }
+| digit+ as lit { LITERAL(int_of_string lit) }
+| (digit* dec digit+ expon?) as lit  { FLITERAL(float_of_string(lit)) }
+| (digit* dec? digit+ expon) as lit  { FLITERAL(float_of_string(lit)) }
+| (digit+ dec digit* expon?) as lit  { FLITERAL(float_of_string(lit)) }
+| (digit+ dec? digit* expon) as lit  { FLITERAL(float_of_string(lit)) }
 | "true" { TRUE }
-| "false" { FALSE } 
+| "false" { FALSE }
 | ['a'-'z'] ['a'-'z' 'A'-'Z' '0'-'9' '_' ]* as id { VARIABLE(id) }
 | ['A'-'Z'] ['a'-'z' 'A'-'Z' '0'-'9']* as id { TYPE(id) }
 | '\''['a'-'z'] ['a'-'z' 'A'-'Z' '0'-'9']* as id { TYPEVAR(id) }

@@ -54,9 +54,13 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
   | Hint(Binop(b, e, f), t)     ->
           let (commonT, returnT) = (match b with
           | ADD -> (Concrete "Int", Concrete "Int")
+          | FADD -> (Concrete "Float", Concrete "Float")
           | SUB -> (Concrete "Int", Concrete "Int")
+          | FSUB -> (Concrete "Float", Concrete "Float")
           | MLT -> (Concrete "Int", Concrete "Int")
+          | FMLT -> (Concrete "Float", Concrete "Float")
           | DIV -> (Concrete "Int", Concrete "Int")
+          | FDIV -> (Concrete "Float", Concrete "Float")
           | MOD -> (Concrete "Int", Concrete "Int")
           | AND -> (Concrete "Bool", Concrete "Bool")
           | OR  -> (Concrete "Bool", Concrete "Bool")
@@ -190,6 +194,15 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
             sexpr = (tp, SBoolLit b);
             sub   = sub;
           }
+(*---------------------------------------------------------------------------*)  
+  | NoHint(FloatLit (f))          ->
+    check (Hint(FloatLit(f), nextTypVar last)) typEnv
+  | Hint(FloatLit (f), t)         ->
+    let (tp, sub) = unification (Concrete "Float") t in
+    { tp    = tp;
+      sexpr = (tp, SFloatLit f);
+      sub   = sub;
+    }
 (*---------------------------------------------------------------------------*)  
   | NoHint(Lambda (LVar(v), e)) -> 
           check (Hint(Lambda (LVar(v), e), nextTypVar last)) typEnv
