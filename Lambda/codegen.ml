@@ -535,50 +535,34 @@ and cppCfunction (name : string)           (* name of the function *)
     (* assume here that llvm_arg represents our lhs list, unpack it *)
     (* unpacked_llvm_args = [l1, l2, l3, ...] *)
     let num_args = List.length args in
-    (* get element *)
-    let sptrval' = L.build_load larg "_sptrval" builder in (* get pointer to val *)
-    let vptr1 = L.build_pointercast sptrval' voidptrptr "_vptr" builder in (* cast to void** for some reason *)
-    (* repeat *)
-    let sptr'   = L.build_gep larg [|(L.const_int i64_t 1)|] "" builder in
-    let sptrval = L.build_load sptr' "_sptrval" builder in (* get pointer to val *)
-    let vptr' = L.build_pointercast sptrval voidptrptr "_vptr" builder in (* cast to void** for some reason *)
-    (* end repeat *)
-    (* get element *)
-    let sptrvalx = L.build_load vptr' "_sptrval" builder in (* get pointer to val *)
-    let vptr2 = L.build_pointercast sptrvalx voidptrptr "_vptr" builder in (* cast to void** for some reason *)
-    let unpacked_llvm_args = [vptr1; vptr2; vptr'] in
-    (*
     let rec unpack llargs n acc =
         (if (n > 1)
-         then 
-             let valptrtmp = L.build_load llargs "_valptrtmp" builder in (* get pointer to val *)
-             let valptrcst = L.build_pointercast valptrtmp voidptrptr "_valptrcst" builder in (* cast to void** for some reason *)
+        then 
+            let sptrval' = L.build_load llargs "_sptrval" builder in (* get pointer to val *)
+            let vptr1 = L.build_pointercast sptrval' voidptrptr "_vptr" builder in (* cast to void** for some reason *)
+            let sptr'   = L.build_gep llargs [|(L.const_int i64_t 1)|] "" builder in
+            let sptrval = L.build_load sptr' "_sptrval" builder in (* get pointer to val *)
+            let vptr' = L.build_pointercast sptrval voidptrptr "_vptr" builder in (* cast to void** for some reason *)
+            unpack vptr' (n - 1) (vptr1 :: acc)
+        else
+      let parg = L.build_ptrtoint llargs i64_t "_parg" builder in
 
-             (*
-  let ltmp = L.build_load valptrcst "" builder in
-  let parg = L.build_ptrtoint ltmp i64_t "_parg" builder in
+      let formatString = L.const_stringz context "llar:  %lld\n" in
+      let global = L.define_global "formatString" formatString the_module in
+      let _ = L.set_unnamed_addr true global in
+      let printf = L.declare_function "printf" (L.var_arg_function_type i32_t [|voidptr|])
+                                     the_module in
+      (* call printf *)
+      let castglobal = L.build_in_bounds_gep global 
+                       [|L.const_int i64_t 0; L.const_int i64_t 0|] 
+                       "_castglobal" builder in
+      let _ = L.build_call printf [| castglobal; parg|] "_" builder in
+          let local = L.build_alloca voidptr "" builder in
+          let sptr' = L.build_pointercast llargs voidptr "" builder in
+          let _ = L.build_store sptr' local builder in
+          List.rev (local :: acc)) in
+    let unpacked_llvm_args = unpack larg num_args [] in
 
-  let formatString = L.const_stringz context "%lld\n" in
-  let global = L.define_global "formatString" formatString the_module in
-  let _ = L.set_unnamed_addr true global in
-  let printf = L.declare_function "printf" (L.var_arg_function_type i32_t [|voidptr|])
-                                 the_module in
-  (* call printf *)
-  let castglobal = L.build_in_bounds_gep global 
-                   [|L.const_int i64_t 0; L.const_int i64_t 0|] 
-                   "_castglobal" builder in
-  let _ = L.build_call printf [| castglobal; parg|] "_" builder in
-            *)
-
-             let ptraddr   = L.build_gep llargs [|(L.const_int i64_t 1)|] "" builder in
-             (* let _ = prerr_endline (L.string_of_llvalue ptraddr) in *)
-             let nxtptrtmp = L.build_load ptraddr "_nxtptrtmp" builder in (* get pointer to val *)
-             let nxtptrcst = L.build_pointercast nxtptrtmp voidptrptr "_nxtptrcst" builder in (* cast to void** for some reason *)
-             unpack nxtptrcst (n - 1) (valptrcst::acc)
-         else
-             List.rev (llargs :: acc)) in
-    let unpacked_llvm_args = unpack llvm_arg (num_args) [] in
-    *)
     (* cast struct *)
     let allocd_struct = L.build_alloca strptrT "env" builder in
     let struct_load = L.build_load llvm_genenv "struct_load" builder in
