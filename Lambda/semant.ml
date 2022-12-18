@@ -337,4 +337,19 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
           sub   = compose rsub fsub;
         }
 (*---------------------------------------------------------------------------*)  
+  | NoHint(Let (MBinding(lhs, rhs), f)) -> 
+        check (Hint(Let (MBinding(lhs, rhs), f), nextTypVar last)) typEnv
+  | Hint(Let (MBinding(lhs, rhs), f), t) ->
+        let { tp    = rtp;
+              sexpr = rexp;
+              sub   = rsub; } = check rhs typEnv in
+        let typEnvNew = List.fold_left (fun m (LVar v) -> M.add v (Scheme([], nextTypVar last)) m) typEnv lhs in   
+        let { tp    = ftp;
+              sexpr = fexp;
+              sub   = fsub; } = check f typEnvNew in
+        { tp    = ftp;
+          sexpr = (ftp, SLet (SMBinding(lhs, rexp), fexp));
+          sub   = compose rsub fsub;
+        }
+(*---------------------------------------------------------------------------*)  
  | _ -> raise(Failure("Semantic checking for pattern matching not implemented yet"))

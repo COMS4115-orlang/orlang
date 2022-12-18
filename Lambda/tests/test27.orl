@@ -1,0 +1,6 @@
+let main =
+    let lst = [[1, 2, 3], [4, 5, 6]] in
+    let (a, b) = lst in
+    let (x::y::z::xs) = a in
+    let (p::q::r::ss) = b in
+    x + y + z + p + q + r
