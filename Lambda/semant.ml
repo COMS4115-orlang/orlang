@@ -32,7 +32,7 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
           else
             let checkHomogeneous tpList =
                 (match tpList with
-                | x::xs -> ignore(List.map (fun t -> unification x t)); true
+                | x::xs -> ignore(List.map (fun t -> unification x t) xs); true
                 | _     -> true) in
             let checkedList = List.map (fun e -> check e typEnv) lst in
             if checkHomogeneous (List.map (fun c -> c.tp) checkedList)
@@ -322,17 +322,19 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
           sub   = compose sub sub3;
         }
 (*---------------------------------------------------------------------------*)  
-(*
-  | NoHint(Let (MBinding(leftLst, e), f)) ->
-        let rightLst = (match e with
-                        | ListLit(lst) -> lst
-                        | _            -> raise (Failure("RHS not a list/tuple"))) in
-        if (List.length leftList) <> (List.length rightList)
-        then raise(Failure("Unequal number of elements"))
-        else
-            
-  (*| Hint(Let *)
-  | Hint(Let (Binding(LVar(v), e, false), f), t) ->
-TODO: M and C Binding *)
+  | NoHint(Let (CBinding(lhs, rhs), f)) -> 
+        check (Hint(Let (CBinding(lhs, rhs), f), nextTypVar last)) typEnv
+  | Hint(Let (CBinding(lhs, rhs), f), t) ->
+        let { tp    = rtp;
+              sexpr = rexp;
+              sub   = rsub; } = check rhs typEnv in
+        let typEnvNew = List.fold_left (fun m (LVar v) -> M.add v (Scheme([], nextTypVar last)) m) typEnv lhs in   
+        let { tp    = ftp;
+              sexpr = fexp;
+              sub   = fsub; } = check f typEnvNew in
+        { tp    = ftp;
+          sexpr = (ftp, SLet (SCBinding(lhs, rexp), fexp));
+          sub   = compose rsub fsub;
+        }
 (*---------------------------------------------------------------------------*)  
  | _ -> raise(Failure("Semantic checking for pattern matching not implemented yet"))
