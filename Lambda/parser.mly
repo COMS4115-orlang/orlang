@@ -2,14 +2,13 @@
    open Ast 
    open List
    open Desugar
-   (*| LPAREN RPAREN               { NoHint(UnitLit) }*)
 %}
 
 %token MATCH WITH GUARD SEMICOLON 
 %token LPAREN RPAREN 
 %token LBRACKET RBRACKET COMMA GUARDDOT DOTGUARD
 %token LAMBDA ARROW DARROW
-%token PLUS MINUS TIMES DIV MOD FPLUS FMINUS FDIV FTIMES LCAT
+%token PLUS MINUS TIMES DIV MOD FPLUS FMINUS FDIV FTIMES 
 
 %token LET REC EQUALS WHERE AND IN
 %token IF THEN ELSE
@@ -36,7 +35,7 @@
 %left DOUBLEEQUALS LT LTE GT GTE
 %left BAND BOR
 %left BNOT
-%left PLUS MINUS FPLUS FMINUS LCAT
+%left PLUS MINUS FPLUS FMINUS
 %left TIMES DIV MOD FTIMES FDIV
 %left PRINT ORD CHR
 %left LIST
@@ -180,7 +179,6 @@ expr:
 | expr LTE   expr             { NoHint(Binop(LTE, $1, $3)) }
 | expr GT    expr             { NoHint(Binop(GT, $1, $3)) }
 | expr GTE   expr             { NoHint(Binop(GTE, $1, $3)) }
-| expr LCAT expr             { NoHint(Binop(LCAT, $1, $3)) }
 | BNOT  expr                  { NoHint(Unop(NOT, $2)) }
 | IF expr THEN expr ELSE expr { NoHint(If($2, $4, $6)) }
 | MATCH expr WITH patternMatrix SEMICOLON { patternsToIfElse(PatternMatch($2, $4)) }
