@@ -12,6 +12,8 @@ let the_module = L.create_module context "Orlang"
 let i8_t       = L.i8_type context
 let i32_t      = L.i32_type context
 let i64_t      = L.i64_type context
+let float_t    = L.float_type context
+let double_t   = L.double_type context
 let voidptr    = L.pointer_type i8_t
 let voidptrptr = L.pointer_type voidptr
 
@@ -893,7 +895,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
 
           (* create a new var that stores the int casted to void* *)
           let local = L.build_alloca voidptr var builder in
-          let const = L.build_inttoptr (L.const_int i64_t i) 
+          let const = L.build_inttoptr (L.const_int i64_t i)
                                        voidptr
                                        "const" builder in
           let _ = L.build_store const local builder in
@@ -917,6 +919,20 @@ and check (sexpr : sExpr)          (* expression to translate *)
             var   = var;
             lvar  = local;
           }
+  | SFloatLit (f)         ->
+    let var = "_" ^ (nextEntry lastTemp) in
+
+    (* create a new var that stores the float casted to void* *)
+    let local = L.build_alloca voidptr var builder in
+    let const = L.build_bitcast (L.const_float double_t f) 
+                                 voidptr
+                                 "const" builder in
+    let _ = L.build_store const local builder in
+
+    { code  = "\tvoid* " ^ var ^ " = ((void* ) " ^ string_of_float f ^ ");\n";
+      var   = var;
+      lvar  = local;
+    }
 (*---------------------------------------------------------------------------*)  
   | SListLit (lst)         ->
           let var = "_" ^ (nextEntry lastTemp) in
@@ -956,10 +972,10 @@ and check (sexpr : sExpr)          (* expression to translate *)
           var   = fvar; 
           lvar  = flvar; } = check f typEnv llvmEnv builder in
     let sym = (match b with
-              | ADD -> "+"
-              | SUB -> "-"
-              | MLT -> "*"
-              | DIV -> "/"
+              | ADD | FADD -> "+"
+              | SUB | FSUB -> "-"
+              | MLT | FMLT -> "*"
+              | DIV | FDIV -> "/"
               | MOD -> "%"
               | AND -> "&&"
               | OR  -> "||"
