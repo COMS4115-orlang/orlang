@@ -23,6 +23,10 @@ rule tokenize = parse
 | ']'   { RBRACKET }
 | ','   { COMMA }
 | "=="  { DOUBLEEQUALS }
+| '<'   { LT }
+| "<="  { LTE }
+| '>'   { GT }
+| ">="  { GTE }
 | '='   { EQUALS }
 | "&&"  { BAND }
 | "@"  { ATT }

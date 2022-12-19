@@ -17,7 +17,7 @@
 %token TRUE FALSE 
 %token PRINTINT
 
-%token BAND BOR BNOT DOUBLEEQUALS
+%token BAND BOR BNOT DOUBLEEQUALS LT LTE GT GTE
 
 %token <int> LITERAL
 %token <float> FLITERAL
@@ -30,7 +30,7 @@
 %left IN
 %left COLON
 %left DCOLON
-%left DOUBLEEQUALS
+%left DOUBLEEQUALS LT LTE GT GTE
 %left BAND BOR
 %left BNOT
 %left PLUS MINUS FPLUS FMINUS
@@ -169,6 +169,10 @@ expr:
 | expr BOR   expr            { NoHint(Binop(OR, $1, $3)) }
 | expr COLON expr            { NoHint(LCons($1, $3)) }
 | expr DOUBLEEQUALS   expr   { NoHint(Binop(EQ, $1, $3)) }
+| expr LT    expr            { NoHint(Binop(LT, $1, $3)) }
+| expr LTE   expr            { NoHint(Binop(LTE, $1, $3)) }
+| expr GT    expr            { NoHint(Binop(GT, $1, $3)) }
+| expr GTE   expr            { NoHint(Binop(GTE, $1, $3)) }
 | BNOT  expr                 { NoHint(Unop(NOT, $2)) }
 | IF expr THEN expr ELSE expr { NoHint(If($2, $4, $6)) }
 | MATCH expr WITH patternMatrix SEMICOLON { patternsToIfElse(PatternMatch($2, $4)) }
