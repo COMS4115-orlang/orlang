@@ -25,6 +25,7 @@ rule tokenize = parse
 | "=="  { DOUBLEEQUALS }
 | '='   { EQUALS }
 | "&&"  { BAND }
+| "@"  { ATT }
 | "||"  { BOR }
 | "!"   { BNOT }
 | '\\'  { LAMBDA }
@@ -43,6 +44,7 @@ rule tokenize = parse
 | "else" { ELSE }
 | "match" { MATCH}
 | "with" { WITH }
+| "printInt" { PRINTINT }
 | "|"   { GUARD }
 | ";"   { SEMICOLON }
 | "otherwise"   { OTHERWISE }
