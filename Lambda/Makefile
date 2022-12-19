@@ -36,6 +36,7 @@ all_tests: build
 	-./test.sh 31
 	-./test.sh 32
 	-./test.sh 33
+	-./test.sh 34
 	
 .PHONY : test
 test:
