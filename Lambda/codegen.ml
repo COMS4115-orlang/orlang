@@ -902,7 +902,10 @@ and check (sexpr : sExpr)          (* expression to translate *)
 
     let local = L.build_array_malloc voidptr (L.const_int i64_t 2) var builder in
 
-    let avptr = L.build_pointercast elvar voidptr "_avptr" builder in
+    let elem = L.build_load elvar "_elem" builder in
+    let heapd = L.build_malloc voidptr "_heapd" builder in
+    let _ = L.build_store elem heapd builder in 
+    let avptr = L.build_pointercast heapd voidptr "_avptr" builder in
     let _ = L.build_store avptr local builder in
 
     let sptr  = L.build_gep local [|(L.const_int i64_t 1)|] "_sptr" builder in

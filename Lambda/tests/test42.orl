@@ -13,7 +13,7 @@ let fibList n =
     | otherwise => acc
     ;
   in
-  fibHelper n 1 [0, 1]
+  fibHelper n 1 [1, 0]
 
 let plus x y = x + y
 

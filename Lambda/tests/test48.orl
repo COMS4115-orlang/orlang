@@ -1,0 +1,15 @@
+let rec lsum xss = 
+  match |.xss.| with
+  | 0 => 0
+  | otherwise => let (x :: xs) = xss 
+                 in x + (lsum xs)
+  ;
+
+let fibList n = [0, 1, 2]
+
+let plus x y = x + y
+
+let main =
+  let fl = fibList 10 in
+  lsum fl
+
