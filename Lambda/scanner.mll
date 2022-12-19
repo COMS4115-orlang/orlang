@@ -1,4 +1,5 @@
-{ open Parser }
+{ open Parser 
+  open Char }
 
 let digit = ['0'-'9']
 let sign = ('+'|'-')?
@@ -48,7 +49,7 @@ rule tokenize = parse
 | "else" { ELSE }
 | "match" { MATCH}
 | "with" { WITH }
-| "printInt" { PRINTINT }
+| "print" { PRINT }
 | "|"   { GUARD }
 | "|."   { GUARDDOT }
 | ".|"   { DOTGUARD }
@@ -59,6 +60,7 @@ rule tokenize = parse
 | (digit* dec? digit+ expon) as lit  { FLITERAL(float_of_string(lit)) }
 | (digit+ dec digit* expon?) as lit  { FLITERAL(float_of_string(lit)) }
 | (digit+ dec? digit* expon) as lit  { FLITERAL(float_of_string(lit)) }
+| "'" (_ as character) "'" {CLITERAL(code character)}
 | "true" { TRUE }
 | "false" { FALSE }
 | ['a'-'z'] ['a'-'z' 'A'-'Z' '0'-'9' '_' ]* as id { VARIABLE(id) }

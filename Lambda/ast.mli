@@ -18,6 +18,7 @@ type unop = NOT
 
 type expr =
     IntLit of int
+  | CharLit of int
   | BoolLit of int
   | FloatLit of float
   | UnitLit
@@ -25,7 +26,7 @@ type expr =
   | Binop of binop * hExpr * hExpr
   | LCons of hExpr * hExpr
   | LLen of hExpr
-  | PrintInt of hExpr
+  | Print of hExpr
   | Unop of unop * hExpr
   | Var of string
   | Call of hExpr * hExpr
@@ -55,6 +56,7 @@ type scheme =
 type sExpr = typ * sx 
 and sx =
     SIntLit of int
+  | SCharLit of int
   | SBoolLit of int
   | SUnitLit
   | SFloatLit of float
@@ -63,7 +65,7 @@ and sx =
   | SUnop of unop * sExpr
   | SLCons of sExpr * sExpr
   | SLLen of sExpr
-  | SPrintInt of sExpr
+  | SPrint of sExpr
   | SIf of sExpr * sExpr * sExpr
   | SVar of string
   | SCall of sExpr * sExpr

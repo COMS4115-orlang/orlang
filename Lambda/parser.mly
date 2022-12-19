@@ -16,13 +16,14 @@
 %token EOF
 %token VAL COLON DCOLON OTHERWISE
 %token TRUE FALSE 
-%token PRINTINT
+%token PRINT
 
 %token BAND BOR BNOT DOUBLEEQUALS LT LTE GT GTE
 
 %token UNIT LIST
 
 %token <int> LITERAL
+%token <int> CLITERAL 
 %token <float> FLITERAL
 %token <string> VARIABLE
 %token <string> TYPE TYPEVAR
@@ -37,7 +38,7 @@
 %left BNOT
 %left PLUS MINUS FPLUS FMINUS
 %left TIMES DIV MOD FTIMES FDIV
-%left PRINTINT
+%left PRINT
 %left LIST
 
 %start topLevel
@@ -182,7 +183,7 @@ expr:
 | BNOT  expr                  { NoHint(Unop(NOT, $2)) }
 | IF expr THEN expr ELSE expr { NoHint(If($2, $4, $6)) }
 | MATCH expr WITH patternMatrix SEMICOLON { patternsToIfElse(PatternMatch($2, $4)) }
-| PRINTINT expr               { NoHint(PrintInt($2)) }
+| PRINT expr                  { NoHint(Print($2)) }
 
 multVars:
 | VARIABLE COMMA multVars { (LVar($1))::($3) }
@@ -212,6 +213,7 @@ call:
 
 arg:
 | LITERAL                     { NoHint(IntLit($1)) }
+| CLITERAL                    { NoHint(CharLit($1)) }
 | FLITERAL                    { NoHint(FloatLit($1)) }
 | TRUE                        { NoHint(BoolLit(1)) }
 | FALSE                       { NoHint(BoolLit(0)) }

@@ -13,8 +13,9 @@ module S = Set.Make(String)
 
 let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
   match expr with
-  | NoHint(Var (s))             -> 
-          check (Hint(Var(s), nextTypVar last)) typEnv
+  | NoHint(x) ->
+          check (Hint(x, nextTypVar last)) typEnv
+(*---------------------------------------------------------------------------*)  
   | Hint(Var (s), t)             -> 
           (* Instantiation of forall types is done at this step;
              This also checks for referencing of undefined vars *)
@@ -27,8 +28,6 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
               }
           else raise (Failure("use of undefined variable " ^ s))
 (*---------------------------------------------------------------------------*)  
-  | NoHint(ListLit(lst)) ->
-          check (Hint(ListLit(lst), nextTypVar last)) typEnv 
   | Hint(ListLit(lst), t) ->
           if (List.length lst) = 0
           then raise (Failure("Empty list not supported"))
@@ -50,8 +49,6 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
                 }
             else raise (Failure("List type is not homogeneous"))
   (*---------------------------------------------------------------------------*)  
-  | NoHint(Binop(b, e, f))      -> 
-          check (Hint(Binop(b, e, f), nextTypVar last)) typEnv
   | Hint(Binop(b, e, f), t)     ->
           let (commonT, returnT) = (match b with
           | ADD -> (Concrete "Int", Concrete "Int")
@@ -92,8 +89,6 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
             sub   = sub;
           }
 (*---------------------------------------------------------------------------*)  
-  | NoHint(LCons(e, f)) ->
-          check (Hint(LCons(e, f), nextTypVar last)) typEnv
   | Hint(LCons(e, f), t) ->
           let { tp = te;
                 sexpr = se;
@@ -108,8 +103,6 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
             sub = subh;
           }
 (*---------------------------------------------------------------------------*)  
-  | NoHint(LLen(e)) ->
-          check (Hint(LLen(e), nextTypVar last)) typEnv
   | Hint(LLen(e), t) ->
           let { tp = te;
                 sexpr = se;
@@ -121,8 +114,6 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
             sub = compose subR subl;
           }
 (*---------------------------------------------------------------------------*)  
-  | NoHint(Unop(b, e))      -> 
-          check (Hint(Unop(b, e), nextTypVar last)) typEnv
   | Hint(Unop(b, e), t)     ->
           let (commonT, returnT) = (match b with
           | NOT -> (Concrete "Bool", Concrete "Bool")) in
@@ -140,8 +131,6 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
             sub   = sub;
           }
 (*---------------------------------------------------------------------------*)  
-  | NoHint(If(c, t, e))      -> 
-          check (Hint(If(c, t, e), nextTypVar last)) typEnv
   | Hint(If(c, t, e), tp)     ->
           (* it is essential to NOT evaluate both branches prematurely;
              this can lead to infinite runs on branches that are actually
@@ -182,8 +171,6 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
             sub   = sub;
           }
 (*---------------------------------------------------------------------------*)  
-  | NoHint(UnitLit)           ->
-          check (Hint(UnitLit, nextTypVar last)) typEnv
   | Hint(UnitLit, t)          ->
           let (tp, sub) = unification Unit t in
           { tp    = tp;
@@ -191,8 +178,6 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
             sub   = sub;
           }          
 (*---------------------------------------------------------------------------*)  
-  | NoHint(IntLit (i))           ->
-          check (Hint(IntLit(i), nextTypVar last)) typEnv
   | Hint(IntLit (i), t)          ->
           let (tp, sub) = unification (Concrete "Int") t in
           { tp    = tp;
@@ -200,8 +185,13 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
             sub   = sub;
           }          
 (*---------------------------------------------------------------------------*)  
-  | NoHint(BoolLit (b))          ->
-          check (Hint(BoolLit(b), nextTypVar last)) typEnv
+  | Hint(CharLit (i), t)          ->
+          let (tp, sub) = unification (Concrete "Char") t in
+          { tp    = tp;
+            sexpr = (tp, SCharLit i);
+            sub   = sub;
+          }          
+(*---------------------------------------------------------------------------*)  
   | Hint(BoolLit (b), t)         ->
           let (tp, sub) = unification (Concrete "Bool") t in
           { tp    = tp;
@@ -209,8 +199,6 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
             sub   = sub;
           }
 (*---------------------------------------------------------------------------*)  
-  | NoHint(FloatLit (f))          ->
-    check (Hint(FloatLit(f), nextTypVar last)) typEnv
   | Hint(FloatLit (f), t)         ->
     let (tp, sub) = unification (Concrete "Float") t in
     { tp    = tp;
@@ -218,8 +206,6 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
       sub   = sub;
     }
 (*---------------------------------------------------------------------------*)  
-  | NoHint(Lambda (LVar(v), e)) -> 
-          check (Hint(Lambda (LVar(v), e), nextTypVar last)) typEnv
   | Hint(Lambda (LVar(v), e), tp) -> 
           let tv = nextTypVar last in
           let typEnvNew = M.add v (Scheme([], tv)) typEnv in
@@ -237,8 +223,6 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
             sub   = sub;
           } 
 (*---------------------------------------------------------------------------*)  
-  | NoHint(Call (f, arg))       -> 
-          check (Hint(Call (f, arg), nextTypVar last)) typEnv
   | Hint(Call (f, arg), t)      -> 
           let retTyp = t in
           let { tp    = funcTypInit; 
@@ -259,8 +243,6 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
             sub   = sub;
           }
 (*---------------------------------------------------------------------------*)  
-  | NoHint(Let (Binding(LVar(v), e, false), f)) ->
-          check (Hint(Let (Binding(LVar(v), e, false), f), nextTypVar last)) typEnv
   | Hint(Let (Binding(LVar(v), e, false), f), t) ->
           (* non-recursive let-bindings *)
 
@@ -294,8 +276,6 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
             sub   = compose sub sub3;
           }
 (*---------------------------------------------------------------------------*)  
-  | NoHint(Let (Binding(LVar(v), e, true), f))  ->
-        check (Hint(Let (Binding(LVar(v), e, true), f), nextTypVar last)) typEnv
   | Hint(Let (Binding(LVar(v), e, true), f), t) ->
         (* a let rec equal to a non-lambda expression cannot possibly
            refer to itself, so revert to non-recursive case *)
@@ -350,13 +330,14 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
           sub   = compose sub sub3;
         }
 (*---------------------------------------------------------------------------*)  
-  | NoHint(Let (CBinding(lhs, rhs), f)) -> 
-        check (Hint(Let (CBinding(lhs, rhs), f), nextTypVar last)) typEnv
   | Hint(Let (CBinding(lhs, rhs), f), t) ->
         let { tp    = rtp;
               sexpr = rexp;
               sub   = rsub; } = check rhs typEnv in
-        let typEnvNew = List.fold_left (fun m (LVar v) -> M.add v (Scheme([], nextTypVar last)) m) typEnv lhs in   
+        let typEnvNew = List.fold_left 
+                          (fun m (LVar v) -> M.add v (Scheme([], nextTypVar last)) m) 
+                          typEnv 
+                          lhs in   
         let { tp    = ftp;
               sexpr = fexp;
               sub   = fsub; } = check f typEnvNew in
@@ -365,13 +346,14 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
           sub   = compose rsub fsub;
         }
 (*---------------------------------------------------------------------------*)  
-  | NoHint(Let (MBinding(lhs, rhs), f)) -> 
-        check (Hint(Let (MBinding(lhs, rhs), f), nextTypVar last)) typEnv
   | Hint(Let (MBinding(lhs, rhs), f), t) ->
         let { tp    = rtp;
               sexpr = rexp;
               sub   = rsub; } = check rhs typEnv in
-        let typEnvNew = List.fold_left (fun m (LVar v) -> M.add v (Scheme([], nextTypVar last)) m) typEnv lhs in   
+        let typEnvNew = List.fold_left 
+                          (fun m (LVar v) -> M.add v (Scheme([], nextTypVar last)) m) 
+                          typEnv 
+                          lhs in   
         let { tp    = ftp;
               sexpr = fexp;
               sub   = fsub; } = check f typEnvNew in
@@ -380,12 +362,16 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
           sub   = compose rsub fsub;
         }
 (*---------------------------------------------------------------------------*)  
-   | NoHint(PrintInt(expr)) ->
+   | Hint(Print(expr), t) ->
+        let (tpUnit, sub1) = unification Unit t in
+        let typEnvNew = applyte sub1 typEnv in
         let { tp = xtp;
               sexpr = xexp;
-              sub = xsub; } = check expr typEnv in
-        let _ = unification (Concrete "Int") xtp in
-        { tp = xtp;
-          sexpr = (xtp, SPrintInt(xexp));
-          sub = xsub;
+              sub = xsub; } = check expr typEnvNew in
+        let (tp, sub2) = unification xtp (ListTyp (Concrete "Char")) in
+        let sub = compose sub1 sub2 in
+
+        { tp = tpUnit;
+          sexpr = (tpUnit, SPrint(xexp));
+          sub = sub;
         }

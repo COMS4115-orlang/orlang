@@ -1,0 +1,3 @@
+let main = 
+  let b = print ['a', 'b'] in
+  2

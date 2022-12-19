@@ -275,6 +275,74 @@ let lenFunc : L.llvalue =
     let _ = L.build_br cond_bb builder in
     func
 
+let printFunc : L.llvalue = 
+    let (func, builder, c) = 
+        (match llvmFuncDef "_print_func" ["c"] with
+         | (func, builder, [c]) -> (func, builder, c)
+         | _ -> assert false)
+    in
+    (* blocks *)
+    let cond_bb = L.append_block context "_len_cond" func in
+    let cond_b = L.builder_at_end context cond_bb in
+    let merge_bb = L.append_block context "_len_merge" func in
+    let merge_b = L.builder_at_end context merge_bb in
+    let next_bb = L.append_block context "_len_next" func in
+    let next_b = L.builder_at_end context next_bb in
+
+    (* initialize len to 0 and cptr *)
+    let loadc = L.build_load c "_loadc" builder in
+    let cptr = L.build_alloca voidptr "_cptrs" builder in
+    let _ = L.build_store loadc cptr builder in
+
+    let loadc = L.build_load cptr "_loadc" cond_b in
+    let intc = L.build_ptrtoint loadc i64_t "_bit" cond_b in
+    let boolc = L.build_icmp L.Icmp.Eq intc (L.const_int i64_t 0) "_res" cond_b in
+
+    (* goto next ptr *)
+    let loadc = L.build_load cptr "_loadcmm" next_b in
+    let c' = L.build_pointercast loadc voidptrptr "_cptr" next_b in 
+    (* cast to void** for some reason *)
+
+(*---*)
+  let sptrval' = L.build_load c' "_sptrval" next_b in 
+  let vptr1 = L.build_pointercast sptrval' voidptrptr "_vptr" next_b in 
+  let value = L.build_load vptr1 "_value" next_b in 
+  let parg = L.build_ptrtoint value i64_t "_parg" next_b in
+  let charify = L.build_trunc parg i32_t "_chard" next_b in
+
+  (* declare printf prototype *)
+  let formatString = L.const_stringz context "%c" in
+  let global = L.define_global "formatString" formatString the_module in
+  let _ = L.set_unnamed_addr true global in
+  let printf = L.declare_function "printf" (L.var_arg_function_type i32_t [|voidptr|])
+                                 the_module in
+
+  (* call printf *)
+  let castglobal = L.build_in_bounds_gep global 
+                   [|L.const_int i64_t 0; L.const_int i64_t 0|] 
+                   "_castglobal" next_b in
+  let _ = L.build_call printf [| castglobal; charify|] "_" next_b in
+(*---*)
+
+    let sptr'   = L.build_gep c' [|(L.const_int i64_t 1)|] "" next_b in
+    let sptrval = L.build_load sptr' "_sptrvalx" next_b in (* get pointer to val *)
+    let _ = L.build_store sptrval cptr next_b in
+    let _ = L.build_br cond_bb next_b in
+
+    (* add terminals *)
+
+    (* terminate *)
+    let const = L.build_inttoptr (L.const_int i64_t 0) 
+                                  voidptr
+                                  "const" builder in
+    let _ = L.build_ret const merge_b in
+
+    (* branch condition *)
+    let _ = L.build_cond_br boolc merge_bb next_bb cond_b in
+    let _ = L.build_br cond_bb builder in
+
+    func
+
 (* find the index of an element in a list *)
 let find x ys = 
     let rec helper x index = function
@@ -505,7 +573,6 @@ and cppCfunction (name : string)           (* name of the function *)
            (* get pointer to val *)
            let vptr1 = L.build_pointercast sptrval' voidptrptr "_vptr" builder in 
            (* cast to void** for some reason *)
-           let aaa' = L.build_load vptr1 "_aaa" builder in 
            let sptr'   = L.build_gep llargs [|(L.const_int i64_t 1)|] "" builder in
            let sptrval = L.build_load sptr' "_sptrval" builder in 
            (* get pointer to val *)
@@ -793,6 +860,20 @@ and check (sexpr : sExpr)          (* expression to translate *)
           }
 (*---------------------------------------------------------------------------*)  
   | SIntLit (i)          ->
+          let var = "_" ^ (nextEntry lastTemp) in
+
+          (* create a new var that stores the int casted to void* *)
+          let local = L.build_alloca voidptr var builder in
+          let const = L.build_inttoptr (L.const_int i64_t i) 
+                                       voidptr
+                                       "const" builder in
+          let _ = L.build_store const local builder in
+
+          { var   = var;
+            lvar  = local;
+          }
+(*---------------------------------------------------------------------------*)  
+  | SCharLit (i)          ->
           let var = "_" ^ (nextEntry lastTemp) in
 
           (* create a new var that stores the int casted to void* *)
@@ -1144,5 +1225,24 @@ and check (sexpr : sExpr)          (* expression to translate *)
             lvar  = local;
           }
 
- | SPrintInt(e) -> raise(Failure("to be implemented"))
-         (* e here should evaluate to an Int type *)
+ | SPrint(e) -> 
+    (* construct the List Char *)
+    let { var  = evar;
+          lvar = elvar; } = check e typEnv llvmEnv builder in
+
+    let var = "_" ^ (nextEntry lastTemp) in
+    let printfunc = printFunc in
+
+    let eptr = L.build_pointercast elvar voidptrptr "_eeeeptr" builder in 
+    (* cast to void** for some reason *)
+    let loadeptr = L.build_load eptr "_loadddddd" builder in
+    let xptr = L.build_inttoptr loadeptr voidptr "_xptrdddd" builder in 
+    (* cast to void** for some reason *)
+    (* result stuff *)
+    let local = L.build_alloca voidptr var builder in
+    let call = L.build_call printfunc [|xptr|] "callddd" builder in
+    let _ = L.build_store call local builder in
+
+    { var  = var;
+      lvar = local;
+    }
