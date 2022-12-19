@@ -60,7 +60,12 @@ rule tokenize = parse
 | (digit* dec? digit+ expon) as lit  { FLITERAL(float_of_string(lit)) }
 | (digit+ dec digit* expon?) as lit  { FLITERAL(float_of_string(lit)) }
 | (digit+ dec? digit* expon) as lit  { FLITERAL(float_of_string(lit)) }
-| "'" (_ as character) "'" {CLITERAL(code character)}
+| "'\\n'" { CLITERAL (code '\n') }
+| "'\\r'" { CLITERAL (code '\r') }
+| "'\\t'" { CLITERAL (code '\t') }
+| "'\\b'" { CLITERAL (code '\b') }
+| "'\\''" { CLITERAL (code '\'') }
+| "'" (_ as character) "'" { CLITERAL(code character) }
 | "true" { TRUE }
 | "false" { FALSE }
 | ['a'-'z'] ['a'-'z' 'A'-'Z' '0'-'9' '_' ]* as id { VARIABLE(id) }
