@@ -20,6 +20,7 @@ rule tokenize = parse
 | "!"   { BNOT }
 | '\\'  { LAMBDA }
 | "->"  { ARROW }
+| "=>"  { DARROW }
 | ":"   { COLON }
 | "::"  { DCOLON }
 | "val" { VAL }
@@ -35,10 +36,11 @@ rule tokenize = parse
 | "with" { WITH }
 | "|"   { GUARD }
 | ";"   { SEMICOLON }
+| "otherwise"   { OTHERWISE }
 | ['0'-'9']+ as lit { LITERAL(int_of_string lit) }
 | "true" { TRUE }
 | "false" { FALSE } 
-| ['a'-'z'] ['a'-'z' 'A'-'Z' '0'-'9' '_' ]* as id { VARIABLE(id) }
+| ['a'-'z'] ['a'-'z' 'A'-'Z' '0'-'9' '_']* as id { VARIABLE(id) }
 | ['A'-'Z'] ['a'-'z' 'A'-'Z' '0'-'9']* as id { TYPE(id) }
 | '\''['a'-'z'] ['a'-'z' 'A'-'Z' '0'-'9']* as id { TYPEVAR(id) }
 | eof { EOF }

@@ -1,6 +1,7 @@
 open Ast
 open Unification
 open Instantiation
+
 module M = Map.Make(String)
 module S = Set.Make(String)
 
@@ -315,7 +316,6 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
         let { tp    = retTyp; 
               sexpr = fsexpr; 
               sub = sub3; } = check f typEnvNew in
-
         { tp    = retTyp;
           sexpr = (retTyp, SLet (SBinding (LVar (v), esexpr, true), fsexpr));
           sub   = compose sub sub3;
@@ -351,4 +351,4 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
           sub   = compose rsub fsub;
         }
 (*---------------------------------------------------------------------------*)  
- | _ -> raise(Failure("Semantic checking for pattern matching not implemented yet"))
+

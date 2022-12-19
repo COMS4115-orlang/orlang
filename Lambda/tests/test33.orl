@@ -1,0 +1,13 @@
+val isOdd : Int -> Bool
+let isOdd x =
+  match (x % 2) with
+  | 0         => true
+  | otherwise => false;
+
+val boolToInt : Bool -> Int
+let boolToInt b =
+  match b with
+  | false => 0
+  | otherwise => 1;
+
+let main = boolToInt (isOdd 9)

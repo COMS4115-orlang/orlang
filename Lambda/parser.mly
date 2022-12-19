@@ -1,19 +1,20 @@
 %{ 
    open Ast 
-   open List  
+   open List
+   open Desugar
 %}
 
 %token MATCH WITH GUARD SEMICOLON
 %token LPAREN RPAREN 
 %token LBRACKET RBRACKET COMMA
-%token LAMBDA ARROW
+%token LAMBDA ARROW DARROW
 
-%token PLUS MINUS TIMES DIV MOD BANGBANG
+%token PLUS MINUS TIMES DIV MOD
 
 %token LET REC EQUALS WHERE AND IN
 %token IF THEN ELSE
 %token EOF
-%token VAL COLON DCOLON
+%token VAL COLON DCOLON OTHERWISE
 %token TRUE FALSE 
 
 %token BAND BOR BNOT DOUBLEEQUALS
@@ -22,7 +23,7 @@
 %token <string> VARIABLE
 %token <string> TYPE TYPEVAR
 
-%right ARROW
+%right ARROW DARROW
 %left GUARD
 %left ELSE
 %left IN
@@ -31,7 +32,6 @@
 %left DOUBLEEQUALS
 %left BAND BOR
 %left BNOT
-%left BANGBANG
 %left PLUS MINUS
 %left TIMES DIV MOD
 
@@ -133,7 +133,7 @@ expr:
 | expr DOUBLEEQUALS   expr   { NoHint(Binop(EQ, $1, $3)) }
 | BNOT  expr                 { NoHint(Unop(NOT, $2)) }
 | IF expr THEN expr ELSE expr { NoHint(If($2, $4, $6)) }
-| MATCH expr WITH patternMatrix SEMICOLON { NoHint(PatternMatch($2, $4)) }
+| MATCH expr WITH patternMatrix SEMICOLON { patternsToIfElse(PatternMatch($2, $4)) }
 | LBRACKET lst RBRACKET       { NoHint(ListLit($2)) }
 | GUARD expr GUARD            { NoHint(LLen($2)) }
 
@@ -155,13 +155,9 @@ exprList:
 | expr COMMA exprList { ($1)::($3) }
 
 patternMatrix: 
-| GUARD pattern EQUALS expr               { [PatternRow($2, $4)] }
-| GUARD pattern EQUALS expr patternMatrix { PatternRow($2, $4)::($5) }
-
-pattern:
-| LITERAL      { PatLit($1) }
-| VARIABLE     { PatId($1) }
-| VARIABLE exprList { PatCon($1, $2) }
+| GUARD expr DARROW expr               { [PatternRow(Pattern($2), $4)] }
+| GUARD OTHERWISE DARROW expr         { [PatternRow(PatDefault, $4)] }
+| GUARD expr DARROW expr patternMatrix { PatternRow(Pattern($2), $4)::($5) }
 
 lambda:
 | VARIABLE ARROW expr         { NoHint(Lambda(LVar($1), $3)) }
