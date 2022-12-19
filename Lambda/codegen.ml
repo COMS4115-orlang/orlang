@@ -346,7 +346,7 @@ let printFunc : L.llvalue =
 (* find the index of an element in a list *)
 let find x ys = 
     let rec helper x index = function
-    |  []     -> raise(Failure("impossible"))
+    | []     -> raise(Failure("impossible"))
     | y :: ys -> if x = y then index
                           else helper x (index + 1) ys
     in helper x 0 ys
