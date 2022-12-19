@@ -52,6 +52,7 @@ all_tests: build
 	-./test.sh 47
 	-./test.sh 48
 	-./test.sh 49
+	-./test.sh 50
 	
 .PHONY : test
 test:

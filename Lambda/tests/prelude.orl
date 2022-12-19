@@ -62,3 +62,15 @@ let head lst =
 val tail : List 'bny -> List 'bny
 let tail lst = 
   let (x :: xs) = lst in xs
+
+val reverse : List 'cny -> List 'cny
+let reverse lst = 
+  let rec reverse_helper lst acc = 
+    if |.lst.| == 0
+    then
+      acc
+    else 
+      let (x :: xs) = lst in
+      reverse_helper xs (x :: acc)
+  in
+  reverse_helper lst []

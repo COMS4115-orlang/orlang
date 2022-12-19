@@ -1,0 +1,5 @@
+let main =
+  let lst = [994, 995, 996, 997, 998] in
+  let rev = reverse lst in
+  let (x :: xs) = rev in
+  print_int_endline (x)
