@@ -1,4 +1,4 @@
 let main =
   let lst = [4000, 100, 10, 5] in
   let (a, b, c, d) = lst in
-  a + b + c + d
+  print_int_endline (a + b + c + d)

@@ -1,4 +1,4 @@
 let main =
     let lst = [11111, 22222, 33333, 44444, 55555] in
     let (x::xs) = lst
-    in x
+    in print_int_endline x

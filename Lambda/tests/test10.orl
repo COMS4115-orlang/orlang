@@ -3,5 +3,5 @@ let boolToInt b =
   | false => 0
   | otherwise => 1;
 
-let main = boolToInt true
+let main = print_int_endline (boolToInt true)
 

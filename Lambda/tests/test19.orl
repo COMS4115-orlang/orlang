@@ -1,4 +1,4 @@
 let fun n = 3
 let rec g = fun
 
-let main = g 2
+let main = print_int_endline (g 2)

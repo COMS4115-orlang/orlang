@@ -50,6 +50,8 @@ rule tokenize = parse
 | "match" { MATCH}
 | "with" { WITH }
 | "print" { PRINT }
+| "ord" { ORD }
+| "chr" { CHR }
 | "|"   { GUARD }
 | "|."   { GUARDDOT }
 | ".|"   { DOTGUARD }

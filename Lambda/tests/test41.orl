@@ -12,5 +12,5 @@ let plus x y = x + y
 
 let main =
   let fl = fibList 10 in
-  plus |.fl.| 10
+  print_int_endline (plus |.fl.| 10)
 

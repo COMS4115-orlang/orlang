@@ -6,10 +6,12 @@ let f = (\x -> x)
 let x = true
 let tru = f (x || false)
 let fls = f (x && (! true))
-let main = if tru 
+let main = 
+  print_int_endline
+          (if tru 
            then
               if fls 
               then 0
               else 1
-           else 0
+           else 0)
 

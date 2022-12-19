@@ -16,7 +16,7 @@
 %token EOF
 %token VAL COLON DCOLON OTHERWISE
 %token TRUE FALSE 
-%token PRINT
+%token PRINT ORD CHR
 
 %token BAND BOR BNOT DOUBLEEQUALS LT LTE GT GTE
 
@@ -38,7 +38,7 @@
 %left BNOT
 %left PLUS MINUS FPLUS FMINUS
 %left TIMES DIV MOD FTIMES FDIV
-%left PRINT
+%left PRINT ORD CHR
 %left LIST
 
 %start topLevel
@@ -67,7 +67,7 @@ topLevel:
                                                     immediately followed by \
                                                     an accompanying definition"))
                               }
-| letBinding                  { NoHint(Let($1, Hint(Var "main", Concrete "Int"))) }
+| letBinding                  { NoHint(Let($1, Hint(Var "main", Unit))) }
 | typeAnn letBinding          { let (v1, tp) = $1 in
                                 let v2 = 
                                     match $2 with
@@ -75,7 +75,7 @@ topLevel:
                                     | _ -> raise(Failure("topLevel parsing error"))
                                 in 
                                 if v1 = v2 
-                                then Hint(Let($2, Hint(Var "main", Concrete "Int")), tp)
+                                then Hint(Let($2, Hint(Var "main", Unit)), tp)
                                 else raise(Failure("type annotation must be \
                                                     immediately followed by \
                                                     an accompanying definition"))
@@ -184,6 +184,8 @@ expr:
 | IF expr THEN expr ELSE expr { NoHint(If($2, $4, $6)) }
 | MATCH expr WITH patternMatrix SEMICOLON { patternsToIfElse(PatternMatch($2, $4)) }
 | PRINT expr                  { NoHint(Print($2)) }
+| ORD expr                    { NoHint(Ord($2)) }
+| CHR expr                    { NoHint(Chr($2)) }
 
 multVars:
 | VARIABLE COMMA multVars { (LVar($1))::($3) }

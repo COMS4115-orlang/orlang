@@ -1,0 +1,21 @@
+val string_of_int : Int -> List Char
+let string_of_int x =
+  let rec helper x lst =
+    if x <= 9
+    then chr(x + (ord '0')) :: lst
+    else let r = x % 10 in
+         let x = x / 10 in
+         helper x ((chr (r + (ord '0'))) :: lst)
+  in 
+  let str = helper x [] in
+  if x < 0 
+  then '-' :: str
+  else str
+
+val print_int : Int -> ()
+let print_int x = print (string_of_int x)
+
+val print_int_endline : Int -> ()
+let print_int_endline x = 
+  let useless = print_int x in
+  print ('\n' :: [])

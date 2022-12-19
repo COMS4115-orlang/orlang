@@ -11,8 +11,8 @@ let fibList n =
   let start = [0, 1] in
   fibHelper n 1 start
 
-val main : Int
+val main : ()
 let main =
   let fl = fibList 10 in
-  |.fl.|
+  print_int_endline |.fl.|
 

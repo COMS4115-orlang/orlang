@@ -34,5 +34,6 @@ let five3 =
 val six : Int
 let six = (\x -> \y -> 6) 3 6
 
-let main = five * (10000 / 10) + five2 * (1100 % 1000) + five3 * 10 + six
+let main = 
+  print_int_endline (five * (10000 / 10) + five2 * (1100 % 1000) + five3 * 10 + six)
 

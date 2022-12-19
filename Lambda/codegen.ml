@@ -1225,6 +1225,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
             lvar  = local;
           }
 
+(*---------------------------------------------------------------------------*)  
  | SPrint(e) -> 
     (* construct the List Char *)
     let { var  = evar;
@@ -1246,3 +1247,10 @@ and check (sexpr : sExpr)          (* expression to translate *)
     { var  = var;
       lvar = local;
     }
+(*---------------------------------------------------------------------------*)    
+ | SOrd(e) -> 
+    (* construct the List Char *)
+    check e typEnv llvmEnv builder
+ | SChr(e) -> 
+    (* construct the List Char *)
+    check e typEnv llvmEnv builder

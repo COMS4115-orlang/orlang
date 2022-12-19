@@ -8,8 +8,20 @@ module M = Map.Make(String)
 module S = Set.Make(String)
 module L = Llvm
 
+let read_file filename =
+    let channel = open_in filename in
+    let str = really_input_string channel (in_channel_length channel) in
+    close_in channel;
+    str
+
 let _ =
-  let lexbuf = Lexing.from_channel stdin in
+  let (input, output) = 
+      match Sys.argv with
+        [|_; input; output|] -> (input, output)
+      | _                 -> raise (Failure ("usage: orlang.native <input-file> <output-file>"))
+  in 
+  let contents = (read_file "tests/prelude.orl") ^ (read_file input) in
+  let lexbuf = Lexing.from_string contents in
   let ast = Parser.topLevel Scanner.tokenize lexbuf in
   let env = M.empty in
   let { tp    = _; 
@@ -22,28 +34,11 @@ let _ =
   let builder = L.builder_at_end context (L.entry_block func) in
 
   (* insert the body of the main function *)
-  let { var   = var ;
-        lvar  = lvar; } = Codegen.check sxp env (L.const_null voidptr) builder in
-  
-  (* get result for printing *)
-  let tmp = "_tmp" in
-  let ltmp = L.build_load lvar tmp builder in
-  let parg = L.build_ptrtoint ltmp i64_t "_parg" builder in
-
-  (* declare printf prototype *)
-  let formatString = L.const_stringz context "%lld\n" in
-  let global = L.define_global "formatString" formatString the_module in
-  let _ = L.set_unnamed_addr true global in
-  let printf = L.declare_function "printf" (L.var_arg_function_type i32_t [|voidptr|])
-                                 the_module in
-
-  (* call printf *)
-  let castglobal = L.build_in_bounds_gep global 
-                   [|L.const_int i64_t 0; L.const_int i64_t 0|] 
-                   "_castglobal" builder in
-  let _ = L.build_call printf [| castglobal; parg|] "_" builder in
+  let _ = Codegen.check sxp env (L.const_null voidptr) builder in
 
   (* return 0 *)
   let _ = L.build_ret (L.const_int i32_t 0) builder in
 
-  print_string (Llvm.string_of_llmodule the_module)
+  let channel = open_out output in
+  output_string channel (Llvm.string_of_llmodule the_module);
+  close_out channel

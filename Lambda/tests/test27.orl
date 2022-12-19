@@ -3,4 +3,4 @@ let main =
     let (a, b) = lst in
     let (x::y::z::xs) = a in
     let (p::q::r::ss) = b in
-    x + y + z + p + q + r
+    print_int_endline (x + y + z + p + q + r)

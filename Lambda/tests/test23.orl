@@ -2,4 +2,4 @@ let main =
   let (x::y::xs) = [11, 22, 33, 44, 55, 66] in
   let (z::zs) = xs in
   let (u::v::us) = zs in
-  v
+  print_int_endline v

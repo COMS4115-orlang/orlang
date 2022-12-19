@@ -5,4 +5,4 @@ let rec sum xss =
 
 let main = 
     let lst = (1 :: 2 :: 3 :: 4 :: [5]) in
-    sum lst
+    print_int_endline (sum lst)

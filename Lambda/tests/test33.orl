@@ -10,4 +10,4 @@ let boolToInt b =
   | false => 0
   | otherwise => 1;
 
-let main = boolToInt (isOdd 9)
+let main = print_int_endline (boolToInt (isOdd 9))

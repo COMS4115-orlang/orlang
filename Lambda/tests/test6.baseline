@@ -1,1 +1,1 @@
-Fatal error: exception Failure("cannot unify concrete type Int with arrow type (Int) -> (c)")
+Fatal error: exception Failure("cannot unify concrete type Int with arrow type (Int) -> (di)")
