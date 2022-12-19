@@ -19,3 +19,16 @@ val print_int_endline : Int -> ()
 let print_int_endline x = 
   let useless = print_int x in
   print ('\n' :: [])
+
+val print_endline : List Char -> ()
+let print_endline x = 
+  let useless = print x in
+  print ('\n' :: [])
+
+val head : List 'any -> 'any
+let head lst = 
+  let (x :: xs) = lst in x
+
+val tail : List 'bny -> List 'bny
+let tail lst = 
+  let (x :: xs) = lst in xs
