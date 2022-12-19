@@ -367,4 +367,13 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
           sub   = compose rsub fsub;
         }
 (*---------------------------------------------------------------------------*)  
-
+   | NoHint(PrintInt(expr)) ->
+        let { tp = xtp;
+              sexpr = xexp;
+              sub = xsub; } = check expr typEnv in
+        let _ = unification (Concrete "Int") xtp in
+        { tp = xtp;
+          sexpr = (xtp, SPrintInt(xexp));
+          sub = xsub;
+        }
+   | _ -> raise(Failure("lol"))

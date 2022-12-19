@@ -240,6 +240,55 @@ let ifFunc : (L.llvalue *   (* llvalue of the if function *)
          \t}\n\
      }\n")
 
+let lenFunc : L.llvalue = 
+    let (func, builder, c) = 
+        (match llvmFuncDef "_len_func" ["c"] with
+         | (func, builder, [c]) -> (func, builder, c)
+         | _ -> assert false)
+    in
+
+    (* condition *)
+    let cond_bb = L.append_block context "_len_cond" func in
+    let cond_b = L.builder_at_end context cond_bb in
+
+    (* initialize len to 0 *)
+    let len = L.build_alloca voidptr "_len_val" builder in
+    let const = L.build_inttoptr (L.const_int i64_t 0) voidptr "const" builder in
+    let _ = L.build_store const len builder in
+
+    (* get next pointer *)
+    let next_bb = L.append_block context "_len_next" func in
+    let next_b = L.builder_at_end context next_bb in
+    let loadres = L.build_load len "_loadres" next_b in
+    let lenres = L.build_ptrtoint loadres i64_t "_loadres" next_b in
+    let ptrplusone = L.build_add lenres (L.const_int i64_t 1) "_ptrplusone" next_b in
+    let ptrptrplusone = L.build_inttoptr ptrplusone voidptr "_ptrptrplusone" builder in
+    let _ = L.build_store ptrptrplusone len next_b in
+    (* goto next ptr *)
+    let loadc = L.build_load c "_loadc" next_b in
+    let loadc' = L.build_pointercast loadc voidptrptr "_vptr" next_b in (* cast to void** for some reason *)
+    let sptr'   = L.build_gep loadc' [|(L.const_int i64_t 1)|] "" next_b in
+    let sptrval = L.build_load sptr' "_sptrval" next_b in (* get pointer to val *)
+    let nptr = L.build_pointercast sptrval voidptr "_vptr" next_b in (* cast to void** for some reason *)
+    let _ = L.build_store nptr c next_b in
+    let _ = L.build_br cond_bb next_b in
+
+    (* add terminals *)
+
+    (* terminate *)
+    let merge_bb = L.append_block context "_len_merge" func in
+    let merge_b = L.builder_at_end context merge_bb in
+    let loadres = L.build_load len "_loadres" merge_b in
+    let _ = L.build_ret loadres merge_b in
+
+    (* branch condition *)
+    let loadc = L.build_load c "_loadc" cond_b in
+    let boolc = L.build_icmp L.Icmp.Eq loadc (L.const_null voidptr) "_res" cond_b in
+    let _ = L.build_cond_br boolc merge_bb next_bb cond_b in
+
+    let _ = L.build_br cond_bb builder in
+    func
+
 (* fixed includes and classes *)
 let prelude : string = 
     let (_, applyCode) = applyFunc in
@@ -981,34 +1030,15 @@ and check (sexpr : sExpr)          (* expression to translate *)
           lvar  = elvar; } = check e typEnv llvmEnv builder in
     let var = "_" ^ (nextEntry lastTemp) in
 
-    let rec getlength ptr i = 
-let parg = L.build_ptrtoint ptr i64_t "_parg" builder in
-let formatString = L.const_stringz context "%lld\n" in
-let global = L.define_global "formatString" formatString the_module in
-let _ = L.set_unnamed_addr true global in
-let printf = L.declare_function "printf" (L.var_arg_function_type i32_t [|voidptr|])
-                             the_module in
-(* call printf *)
-let castglobal = L.build_in_bounds_gep global
-               [|L.const_int i64_t 0; L.const_int i64_t 0|]
-               "_castglobal" builder in
-let _ = L.build_call printf [| castglobal; parg|] "_" builder in
-        if (i = 2) || (L.is_null ptr)
-        then
-            i
-        else
-            let ptr'   = L.build_gep ptr [|(L.const_int i64_t 1)|] "" builder in
-            let fload = L.build_load ptr' "" builder in
-            let flptr = L.build_pointercast fload voidptrptr "_avptr" builder in
-            getlength flptr (i+1)
-    in
-    let length = getlength elvar 0 in
-              
+    let eptr' = L.build_load elvar "_eptr'" builder in (* get pointer to val *)
+    let eptr = L.build_pointercast eptr' voidptr "_eptr" builder in (* cast to void** for some reason *)
+
+    let lenfunc = lenFunc in
+
+    (* result stuff *)
     let local = L.build_alloca voidptr var builder in
-    let const = L.build_inttoptr (L.const_int i64_t length) 
-                                 voidptr
-                                 "const" builder in
-    let _ = L.build_store const local builder in
+    let call = L.build_call lenfunc [|eptr|] "call" builder in
+    let _ = L.build_store call local builder in
 
     { code = "";
       var  = var;
@@ -1261,3 +1291,7 @@ let _ = L.build_call printf [| castglobal; parg|] "_" builder in
             var   = var;
             lvar  = local;
           }
+
+ | SPrintInt(e) -> raise(Failure("to be implemented"))
+         (* e here should evaluate to an Int type *)
+ | _ -> raise(Failure("lol"))
