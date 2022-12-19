@@ -9,12 +9,13 @@ type typ =
   | ArrowTyp of typ * typ
   | ListTyp of typ
 
-type binop = ADD | SUB | MLT | DIV | MOD | AND | OR | EQ
+type binop = ADD | SUB | MLT | DIV | MOD | AND | OR | EQ | FADD | FSUB | FMLT | FDIV
 type unop = NOT
 
 type expr =
     IntLit of int
   | BoolLit of int
+  | FloatLit of float
   | ListLit of hExpr list
   | Binop of binop * hExpr * hExpr
   | LCons of hExpr * hExpr
@@ -49,6 +50,7 @@ type sExpr = typ * sx
 and sx =
     SIntLit of int
   | SBoolLit of int
+  | SFloatLit of float
   | SListLit of sExpr list
   | SBinop of binop * sExpr * sExpr
   | SUnop of unop * sExpr

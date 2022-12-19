@@ -8,8 +8,7 @@
 %token LPAREN RPAREN 
 %token LBRACKET RBRACKET COMMA
 %token LAMBDA ARROW DARROW
-
-%token PLUS MINUS TIMES DIV MOD
+%token PLUS MINUS TIMES DIV MOD FPLUS FMINUS FDIV FTIMES
 
 %token LET REC EQUALS WHERE AND IN
 %token IF THEN ELSE
@@ -20,6 +19,7 @@
 %token BAND BOR BNOT DOUBLEEQUALS
 
 %token <int> LITERAL
+%token <float> FLITERAL
 %token <string> VARIABLE
 %token <string> TYPE TYPEVAR
 
@@ -32,8 +32,8 @@
 %left DOUBLEEQUALS
 %left BAND BOR
 %left BNOT
-%left PLUS MINUS
-%left TIMES DIV MOD
+%left PLUS MINUS FPLUS FMINUS
+%left TIMES DIV MOD FTIMES FDIV
 
 %start topLevel
 %type <Ast.hExpr> topLevel
@@ -127,6 +127,10 @@ expr:
 | expr TIMES expr            { NoHint(Binop(MLT, $1, $3)) }
 | expr DIV   expr            { NoHint(Binop(DIV, $1, $3)) }
 | expr MOD   expr            { NoHint(Binop(MOD, $1, $3)) }
+| expr FPLUS  expr           { NoHint(Binop(FADD, $1, $3)) }
+| expr FMINUS expr           { NoHint(Binop(FSUB, $1, $3)) }
+| expr FTIMES expr           { NoHint(Binop(FMLT, $1, $3)) }
+| expr FDIV   expr           { NoHint(Binop(FDIV, $1, $3)) }
 | expr BAND  expr            { NoHint(Binop(AND, $1, $3)) }
 | expr BOR   expr            { NoHint(Binop(OR, $1, $3)) }
 | expr COLON expr            { NoHint(LCons($1, $3)) }
@@ -169,6 +173,7 @@ call:
 
 arg:
 | LITERAL                     { NoHint(IntLit($1)) }
+| FLITERAL                    { NoHint(FloatLit($1)) }
 | TRUE                        { NoHint(BoolLit(1)) }
 | FALSE                       { NoHint(BoolLit(0)) }
 | VARIABLE                    { NoHint(Var($1)) }

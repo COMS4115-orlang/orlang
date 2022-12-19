@@ -1,3 +1,4 @@
 let main = 
     let lst = [5, 5] in
-    |lst|
+    let x = |lst| in
+    x
