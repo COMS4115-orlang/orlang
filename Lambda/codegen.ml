@@ -12,6 +12,8 @@ let the_module = L.create_module context "Orlang"
 let i8_t       = L.i8_type context
 let i32_t      = L.i32_type context
 let i64_t      = L.i64_type context
+let float_t    = L.float_type context
+let double_t   = L.double_type context
 let voidptr    = L.pointer_type i8_t
 let voidptrptr = L.pointer_type voidptr
 
@@ -411,10 +413,6 @@ let cppCfunctioninst (var : string)           (* the varname of the result *)
                     = 
 
     (* get capture, add indices and remove arg *)
-    let capture = (M.fold (fun k _ acc -> k :: acc) typEnv []) in
-    let captureIndex = zipWithIndex capture in
-    let captureFiltr = List.fold_left (fun a c -> removeIndexed a c) captureIndex args in
-    
     let llvmArgs = loadCEnvExcept typEnv llvmEnv args builder in
  
     (* call the llvm_init function with the llvmargs *)
@@ -894,7 +892,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
 
           (* create a new var that stores the int casted to void* *)
           let local = L.build_alloca voidptr var builder in
-          let const = L.build_inttoptr (L.const_int i64_t i) 
+          let const = L.build_inttoptr (L.const_int i64_t i)
                                        voidptr
                                        "const" builder in
           let _ = L.build_store const local builder in
@@ -918,6 +916,20 @@ and check (sexpr : sExpr)          (* expression to translate *)
             var   = var;
             lvar  = local;
           }
+  | SFloatLit (f)         ->
+    let var = "_" ^ (nextEntry lastTemp) in
+
+    (* create a new var that stores the float casted to void* *)
+    let local = L.build_alloca voidptr var builder in
+    let const = L.build_bitcast (L.const_float double_t f) 
+                                 voidptr
+                                 "const" builder in
+    let _ = L.build_store const local builder in
+
+    { code  = "\tvoid* " ^ var ^ " = ((void* ) " ^ string_of_float f ^ ");\n";
+      var   = var;
+      lvar  = local;
+    }
 (*---------------------------------------------------------------------------*)  
   | SListLit (lst)         ->
           let var = "_" ^ (nextEntry lastTemp) in
@@ -957,10 +969,10 @@ and check (sexpr : sExpr)          (* expression to translate *)
           var   = fvar; 
           lvar  = flvar; } = check f typEnv llvmEnv builder in
     let sym = (match b with
-              | ADD -> "+"
-              | SUB -> "-"
-              | MLT -> "*"
-              | DIV -> "/"
+              | ADD | FADD -> "+"
+              | SUB | FSUB -> "-"
+              | MLT | FMLT -> "*"
+              | DIV | FDIV -> "/"
               | MOD -> "%"
               | AND -> "&&"
               | OR  -> "||"
@@ -1226,7 +1238,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
         }
  | SLet (SCBinding(lhs, e), f) ->
           let name = nextEntry lastClass in
-          let vlist = List.map (fun a -> match a with | LVar(v) -> v | _ -> raise(Failure("."))) lhs in 
+          let vlist = List.map (fun (LVar(v)) -> v) lhs in 
           let rec addAllArgs m vars =
               match vars with
               | v::vs -> addAllArgs (M.add v (Scheme([], Concrete "Int")) m) vs
@@ -1260,7 +1272,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
           }
  | SLet (SMBinding(lhs, e), f) ->
           let name = nextEntry lastClass in
-          let vlist = List.map (fun a -> match a with | LVar(v) -> v | _ -> raise(Failure("."))) lhs in 
+          let vlist = List.map (fun (LVar(v)) -> v) lhs in
           let rec addAllArgs m vars =
               match vars with
               | v::vs -> addAllArgs (M.add v (Scheme([], Concrete "Int")) m) vs
