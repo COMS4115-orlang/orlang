@@ -1,3 +1,11 @@
+(*--- Conversions ---*)
+
+val ord : Char -> Int
+let ord x = ord_internal x
+
+val chr : Int -> Char
+let chr x = chr_internal x
+
 val string_of_int : Int -> List Char
 let string_of_int x =
   let rec helper x lst =
@@ -12,6 +20,26 @@ let string_of_int x =
   then '-' :: str
   else str
 
+val string_of_bool : Bool -> List Char
+let string_of_bool x = 
+  if x == true
+  then ['t', 'r', 'u', 'e']
+  else ['f', 'a', 'l', 's', 'e']
+
+val string_of_char : Char -> List Char
+let string_of_char x = x :: []
+
+val int_of_bool : Bool -> Int
+let int_of_bool x =
+  if x == true
+  then 1
+  else 0
+
+(*--- Printing ---*)
+
+val print : List Char -> ()
+let print x = print_internal x
+
 val print_int : Int -> ()
 let print_int x = print (string_of_int x)
 
@@ -24,6 +52,8 @@ val print_endline : List Char -> ()
 let print_endline x = 
   let useless = print x in
   print ('\n' :: [])
+
+(*--- List Operations ---*)
 
 val head : List 'any -> 'any
 let head lst = 
