@@ -1,8 +1,10 @@
+val sum : List Int -> Int
 let rec sum xss =
     match |.xss.| with
     | 0 => 0
     | otherwise => let (x::xs) = xss in (x + (sum xs));
 
+val main : Int
 let main = 
     let lst = [1, 2, 3, 4, 5] in
     sum lst

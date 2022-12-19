@@ -1,3 +1,4 @@
+val fibHelper : Int -> Int -> List Int -> List Int
 let rec fibHelper n cnt acc =
   match (cnt == n) with
   | false     => let (x::y::xs) = acc
@@ -5,10 +6,12 @@ let rec fibHelper n cnt acc =
   | otherwise => acc
   ;
 
+val fibList : Int -> List Int
 let fibList n =
   let start = [0, 1] in
   fibHelper n 1 start
 
+val main : Int
 let main =
   let fl = fibList 10 in
   |.fl.|
