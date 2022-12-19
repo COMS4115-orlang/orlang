@@ -4,7 +4,7 @@
    open Desugar
 %}
 
-%token MATCH WITH GUARD SEMICOLON ATT
+%token MATCH WITH GUARD SEMICOLON 
 %token LPAREN RPAREN 
 %token LBRACKET RBRACKET COMMA
 %token LAMBDA ARROW DARROW
@@ -173,7 +173,7 @@ expr:
 | IF expr THEN expr ELSE expr { NoHint(If($2, $4, $6)) }
 | MATCH expr WITH patternMatrix SEMICOLON { patternsToIfElse(PatternMatch($2, $4)) }
 | LBRACKET lst RBRACKET       { NoHint(ListLit($2)) }
-| ATT expr ATT            { NoHint(LLen($2)) }
+| GUARD expr GUARD            { NoHint(LLen($2)) }
 | PRINTINT LPAREN expr LPAREN { NoHint(PrintInt($3)) }
 
 multVars:

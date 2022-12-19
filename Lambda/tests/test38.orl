@@ -1,0 +1,3 @@
+let main = 
+    let lst = [10000, 20000] in
+    |lst|

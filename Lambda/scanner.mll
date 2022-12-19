@@ -25,7 +25,6 @@ rule tokenize = parse
 | "=="  { DOUBLEEQUALS }
 | '='   { EQUALS }
 | "&&"  { BAND }
-| "@"  { ATT }
 | "||"  { BOR }
 | "!"   { BNOT }
 | '\\'  { LAMBDA }

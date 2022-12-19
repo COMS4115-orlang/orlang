@@ -1,0 +1,7 @@
+let fibList n =
+  let start = [0] in
+  start
+
+let main =
+  let fl = fibList 10 in
+  |fl|

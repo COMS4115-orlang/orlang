@@ -1,0 +1,15 @@
+let rec fibHelper n cnt acc =
+  match (cnt == n) with
+  | false     => let (x::y::xs) = acc
+                 in fibHelper n (cnt + 1) ((x + y):acc)
+  | otherwise => acc
+  ;
+
+let fibList n =
+  let start = [0, 1] in
+  fibHelper n 1 start
+
+let main =
+  let fl = fibList 10 in
+  |fl|
+

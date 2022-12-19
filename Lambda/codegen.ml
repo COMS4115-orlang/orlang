@@ -12,8 +12,6 @@ let the_module = L.create_module context "Orlang"
 let i8_t       = L.i8_type context
 let i32_t      = L.i32_type context
 let i64_t      = L.i64_type context
-let float_t    = L.float_type context
-let double_t   = L.double_type context
 let voidptr    = L.pointer_type i8_t
 let voidptrptr = L.pointer_type voidptr
 
@@ -248,44 +246,49 @@ let lenFunc : L.llvalue =
          | (func, builder, [c]) -> (func, builder, c)
          | _ -> assert false)
     in
-
-    (* condition *)
+    (* blocks *)
     let cond_bb = L.append_block context "_len_cond" func in
     let cond_b = L.builder_at_end context cond_bb in
+    let merge_bb = L.append_block context "_len_merge" func in
+    let merge_b = L.builder_at_end context merge_bb in
+    let next_bb = L.append_block context "_len_next" func in
+    let next_b = L.builder_at_end context next_bb in
 
-    (* initialize len to 0 *)
+    (* initialize len to 0 and cptr *)
     let len = L.build_alloca voidptr "_len_val" builder in
     let const = L.build_inttoptr (L.const_int i64_t 0) voidptr "const" builder in
     let _ = L.build_store const len builder in
 
-    (* get next pointer *)
-    let next_bb = L.append_block context "_len_next" func in
-    let next_b = L.builder_at_end context next_bb in
+    let loadc = L.build_load c "_loadc" builder in
+    let cptr = L.build_alloca voidptr "_cptrs" builder in
+    let _ = L.build_store loadc cptr builder in
+
+    let loadc = L.build_load cptr "_loadc" cond_b in
+    let intc = L.build_ptrtoint loadc i64_t "_bit" cond_b in
+    let boolc = L.build_icmp L.Icmp.Eq intc (L.const_int i64_t 0) "_res" cond_b in
+
+    (* increment len *)
     let loadres = L.build_load len "_loadres" next_b in
     let lenres = L.build_ptrtoint loadres i64_t "_loadres" next_b in
     let ptrplusone = L.build_add lenres (L.const_int i64_t 1) "_ptrplusone" next_b in
-    let ptrptrplusone = L.build_inttoptr ptrplusone voidptr "_ptrptrplusone" builder in
+    let ptrptrplusone = L.build_inttoptr ptrplusone voidptr "_ptrptrplusone" next_b in
     let _ = L.build_store ptrptrplusone len next_b in
+
     (* goto next ptr *)
-    let loadc = L.build_load c "_loadc" next_b in
-    let loadc' = L.build_pointercast loadc voidptrptr "_vptr" next_b in (* cast to void** for some reason *)
-    let sptr'   = L.build_gep loadc' [|(L.const_int i64_t 1)|] "" next_b in
-    let sptrval = L.build_load sptr' "_sptrval" next_b in (* get pointer to val *)
-    let nptr = L.build_pointercast sptrval voidptr "_vptr" next_b in (* cast to void** for some reason *)
-    let _ = L.build_store nptr c next_b in
+    let loadc = L.build_load cptr "_loadcmm" next_b in
+    let c' = L.build_pointercast loadc voidptrptr "_cptr" next_b in (* cast to void** for some reason *)
+    let sptr'   = L.build_gep c' [|(L.const_int i64_t 1)|] "" next_b in
+    let sptrval = L.build_load sptr' "_sptrvalx" next_b in (* get pointer to val *)
+    let _ = L.build_store sptrval cptr next_b in
     let _ = L.build_br cond_bb next_b in
 
     (* add terminals *)
 
     (* terminate *)
-    let merge_bb = L.append_block context "_len_merge" func in
-    let merge_b = L.builder_at_end context merge_bb in
     let loadres = L.build_load len "_loadres" merge_b in
     let _ = L.build_ret loadres merge_b in
 
     (* branch condition *)
-    let loadc = L.build_load c "_loadc" cond_b in
-    let boolc = L.build_icmp L.Icmp.Eq loadc (L.const_null voidptr) "_res" cond_b in
     let _ = L.build_cond_br boolc merge_bb next_bb cond_b in
 
     let _ = L.build_br cond_bb builder in
@@ -413,6 +416,10 @@ let cppCfunctioninst (var : string)           (* the varname of the result *)
                     = 
 
     (* get capture, add indices and remove arg *)
+    let capture = (M.fold (fun k _ acc -> k :: acc) typEnv []) in
+    let captureIndex = zipWithIndex capture in
+    let captureFiltr = List.fold_left (fun a c -> removeIndexed a c) captureIndex args in
+    
     let llvmArgs = loadCEnvExcept typEnv llvmEnv args builder in
  
     (* call the llvm_init function with the llvmargs *)
@@ -793,7 +800,7 @@ and fix (name : string) arg lambdaName typEnv body =
                 ) captureParam) in
 
     (* NULL assignment *)
-    let argIndex = find arg capture in
+    let argIndex = 1 + find arg capture in
     let nullvar = L.build_alloca voidptr "_nullvar" builder in
     let _ = L.build_store (L.const_null voidptr) nullvar builder in
     let _ = llvmAssignMember allocd_struct nullvar argIndex builder in
@@ -805,11 +812,10 @@ and fix (name : string) arg lambdaName typEnv body =
           lvar = elvar; } = check e te allocd_struct builder in
 
     (* make the struct self-referential *)
-    let big_capture = (M.fold (fun k _ acc -> k :: acc) 
-                       (M.add lambdaName dummyScheme (M.add arg dummyScheme typEnv))
-                       []) in
-    let big_argIndex = 1 + (find arg big_capture) in
-    let _ = llvmAssignMember elvar elvar big_argIndex builder in
+    let _ = llvmAssignMember elvar elvar
+                             (if not (M.mem lambdaName te)
+                              then 1 + argIndex
+                              else argIndex) builder in
 
     (* call apply function *)
     let (apply, _) = applyFunc in
@@ -892,7 +898,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
 
           (* create a new var that stores the int casted to void* *)
           let local = L.build_alloca voidptr var builder in
-          let const = L.build_inttoptr (L.const_int i64_t i)
+          let const = L.build_inttoptr (L.const_int i64_t i) 
                                        voidptr
                                        "const" builder in
           let _ = L.build_store const local builder in
@@ -916,26 +922,12 @@ and check (sexpr : sExpr)          (* expression to translate *)
             var   = var;
             lvar  = local;
           }
-  | SFloatLit (f)         ->
-    let var = "_" ^ (nextEntry lastTemp) in
-
-    (* create a new var that stores the float casted to void* *)
-    let local = L.build_alloca voidptr var builder in
-    let const = L.build_bitcast (L.const_float double_t f) 
-                                 voidptr
-                                 "const" builder in
-    let _ = L.build_store const local builder in
-
-    { code  = "\tvoid* " ^ var ^ " = ((void* ) " ^ string_of_float f ^ ");\n";
-      var   = var;
-      lvar  = local;
-    }
 (*---------------------------------------------------------------------------*)  
   | SListLit (lst)         ->
           let var = "_" ^ (nextEntry lastTemp) in
           let elems = List.map (fun e -> let v = check e typEnv llvmEnv builder in v) lst in
           let n = List.length lst in
-          let local = L.build_array_alloca voidptr (L.const_int i64_t (2*n)) var builder in
+          let local = L.build_array_malloc voidptr (L.const_int i64_t (2*n)) var builder in
 
           (* store null pointer in local *)
           let nullp' = (L.const_null i64_t) in
@@ -952,13 +944,13 @@ and check (sexpr : sExpr)          (* expression to translate *)
               (sptr'', sptr)
           in
           let (_, sptr) = List.fold_right linkList elems (local, nullp) in
-          let local = L.build_alloca voidptr var builder in
+          let local' = L.build_alloca voidptr var builder in
           let sptr' = L.build_pointercast sptr voidptr "" builder in
-          let _ = L.build_store sptr' local builder in
+          let _ = L.build_store sptr' local' builder in
 
           { code  = ""; (* add later? *)
             var   = var;
-            lvar  = local;
+            lvar  = local';
           }
 (*---------------------------------------------------------------------------*)  
   | SBinop (b, e, f)     ->
@@ -969,10 +961,10 @@ and check (sexpr : sExpr)          (* expression to translate *)
           var   = fvar; 
           lvar  = flvar; } = check f typEnv llvmEnv builder in
     let sym = (match b with
-              | ADD | FADD -> "+"
-              | SUB | FSUB -> "-"
-              | MLT | FMLT -> "*"
-              | DIV | FDIV -> "/"
+              | ADD -> "+"
+              | SUB -> "-"
+              | MLT -> "*"
+              | DIV -> "/"
               | MOD -> "%"
               | AND -> "&&"
               | OR  -> "||"
@@ -1018,7 +1010,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
           lvar  = flvar; } = check f typEnv llvmEnv builder in
     let var = "_" ^ (nextEntry lastTemp) in
 
-    let local = L.build_array_alloca voidptr (L.const_int i64_t 2) var builder in
+    let local = L.build_array_malloc voidptr (L.const_int i64_t 2) var builder in
 
     let avptr = L.build_pointercast elvar voidptr "_avptr" builder in
     let _ = L.build_store avptr local builder in
@@ -1042,15 +1034,14 @@ and check (sexpr : sExpr)          (* expression to translate *)
           var   = evar; 
           lvar  = elvar; } = check e typEnv llvmEnv builder in
     let var = "_" ^ (nextEntry lastTemp) in
-
-    let eptr' = L.build_load elvar "_eptr'" builder in (* get pointer to val *)
-    let eptr = L.build_pointercast eptr' voidptr "_eptr" builder in (* cast to void** for some reason *)
-
     let lenfunc = lenFunc in
 
+    let eptr = L.build_pointercast elvar voidptrptr "_eeeeptr" builder in (* cast to void** for some reason *)
+    let loadeptr = L.build_load eptr "_loadddddd" builder in
+    let xptr = L.build_inttoptr loadeptr voidptr "_xptrdddd" builder in (* cast to void** for some reason *)
     (* result stuff *)
     let local = L.build_alloca voidptr var builder in
-    let call = L.build_call lenfunc [|eptr|] "call" builder in
+    let call = L.build_call lenfunc [|xptr|] "callddd" builder in
     let _ = L.build_store call local builder in
 
     { code = "";
@@ -1238,7 +1229,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
         }
  | SLet (SCBinding(lhs, e), f) ->
           let name = nextEntry lastClass in
-          let vlist = List.map (fun (LVar(v)) -> v) lhs in 
+          let vlist = List.map (fun a -> match a with | LVar(v) -> v | _ -> raise(Failure("."))) lhs in 
           let rec addAllArgs m vars =
               match vars with
               | v::vs -> addAllArgs (M.add v (Scheme([], Concrete "Int")) m) vs
@@ -1272,7 +1263,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
           }
  | SLet (SMBinding(lhs, e), f) ->
           let name = nextEntry lastClass in
-          let vlist = List.map (fun (LVar(v)) -> v) lhs in
+          let vlist = List.map (fun a -> match a with | LVar(v) -> v | _ -> raise(Failure("."))) lhs in 
           let rec addAllArgs m vars =
               match vars with
               | v::vs -> addAllArgs (M.add v (Scheme([], Concrete "Int")) m) vs

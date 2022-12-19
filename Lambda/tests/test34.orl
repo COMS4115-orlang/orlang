@@ -1,1 +1,8 @@
-censored
+let rec bitch cunt =
+    match |cunt| with
+    | 0 => 0
+    | otherwise => let (x::xs) = cunt in (x + (bitch xs));
+
+let main = 
+    let cunt = [1, 2, 3, 4, 5] in
+    bitch cunt
