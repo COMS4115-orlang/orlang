@@ -382,3 +382,31 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
           sexpr = (tpUnit, SPrint(xexp));
           sub = sub;
         }
+(*---------------------------------------------------------------------------*)  
+   | Hint(Ord(expr), t) ->
+        let (tpRet, sub1) = unification (Concrete "Int") t in
+        let typEnvNew = applyte sub1 typEnv in
+        let { tp = xtp;
+              sexpr = xexp;
+              sub = xsub; } = check expr typEnvNew in
+        let (_, sub2) = unification xtp (Concrete "Char") in
+        let sub = compose sub1 sub2 in
+
+        { tp = tpRet;
+          sexpr = (tpRet, SOrd(xexp));
+          sub = sub;
+        }
+(*---------------------------------------------------------------------------*)  
+   | Hint(Chr(expr), t) ->
+        let (tpRet, sub1) = unification (Concrete "Char") t in
+        let typEnvNew = applyte sub1 typEnv in
+        let { tp = xtp;
+              sexpr = xexp;
+              sub = xsub; } = check expr typEnvNew in
+        let (_, sub2) = unification xtp (Concrete "Int") in
+        let sub = compose sub1 sub2 in
+
+        { tp = tpRet;
+          sexpr = (tpRet, SChr(xexp));
+          sub = sub;
+        }

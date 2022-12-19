@@ -2,4 +2,4 @@ let main =
     let a = [0] in
     let b = (1 :: a) in
     let c = (2 :: b) in
-    |.c.|
+    print_int_endline |.c.|

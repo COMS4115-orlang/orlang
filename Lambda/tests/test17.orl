@@ -2,4 +2,4 @@
 
 let id x = (x : Int)
 
-let main = id true
+let main = print_int_endline (id true)

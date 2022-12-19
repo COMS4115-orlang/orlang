@@ -50,7 +50,9 @@ rule tokenize = parse
 | "else" { ELSE }
 | "match" { MATCH}
 | "with" { WITH }
-| "print" { PRINT }
+| "print_internal" { PRINT }
+| "ord_internal" { ORD }
+| "chr_internal" { CHR }
 | "|"   { GUARD }
 | "|."   { GUARDDOT }
 | ".|"   { DOTGUARD }

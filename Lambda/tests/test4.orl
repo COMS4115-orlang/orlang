@@ -17,5 +17,5 @@ let rec id = (\x -> x)
 val applyFunc: ('b -> 'c) -> 'b -> 'c
 let rec applyFunc f x = f x
 
-let main = applyFunc (applyFunc id fac) (applyFunc id x)
+let main = print_int_endline (applyFunc (applyFunc id fac) (applyFunc id x))
 

@@ -15,4 +15,4 @@ let uselessMath x y = (add (subtract x 1) : Int -> Int) (subtract y 1)
 val uselessMathLam : Int -> (Int -> Int)
 let uselessMathLam x = ((\y -> x + y) : 'a -> 'a)
 
-let main = uselessMath 1 2
+let main = print_int_endline (uselessMath 1 2)

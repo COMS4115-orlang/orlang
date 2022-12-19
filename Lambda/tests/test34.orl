@@ -4,7 +4,7 @@ let rec sum xss =
     | 0 => 0
     | otherwise => let (x::xs) = xss in (x + (sum xs));
 
-val main : Int
+val main : ()
 let main = 
     let lst = [1, 2, 3, 4, 5] in
-    sum lst
+    print_int_endline (sum lst)

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-./orlang.native < tests/test"$1".orl > tests/test"$1".ll 2> tests/test"$1".out
+./orlang.native  tests/test"$1".orl  tests/test"$1".ll 2> tests/test"$1".out
 
 if [ $? -eq 0 ]; then
     clang tests/test"$1".ll -Wno-override-module

@@ -11,5 +11,5 @@ let plus x y = x + y
 
 let main =
   let fl = fibList 10 in
-  lsum fl
+  print_int_endline (lsum fl)
 

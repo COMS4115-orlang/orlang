@@ -7,4 +7,4 @@ let y =
   let x = \y -> x + y in
   x 0
 
-let main = y
+let main = print_int_endline y

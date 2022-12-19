@@ -6,4 +6,4 @@ let x = [()]
 
 let main = 
   let y = f x x in
-  0
+  print_int_endline (-20)

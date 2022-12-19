@@ -29,6 +29,8 @@ type expr =
   | LCons of hExpr * hExpr
   | LLen of hExpr
   | Print of hExpr
+  | Ord of hExpr
+  | Chr of hExpr
   | Unop of unop * hExpr
   | Var of string
   | Call of hExpr * hExpr
@@ -68,6 +70,8 @@ and sx =
   | SLCons of sExpr * sExpr
   | SLLen of sExpr
   | SPrint of sExpr
+  | SOrd of sExpr
+  | SChr of sExpr
   | SIf of sExpr * sExpr * sExpr
   | SVar of string
   | SCall of sExpr * sExpr
