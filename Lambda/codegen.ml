@@ -505,6 +505,7 @@ and cppCfunction (name : string)           (* name of the function *)
            (* get pointer to val *)
            let vptr1 = L.build_pointercast sptrval' voidptrptr "_vptr" builder in 
            (* cast to void** for some reason *)
+           let aaa' = L.build_load vptr1 "_aaa" builder in 
            let sptr'   = L.build_gep llargs [|(L.const_int i64_t 1)|] "" builder in
            let sptrval = L.build_load sptr' "_sptrval" builder in 
            (* get pointer to val *)
@@ -821,9 +822,16 @@ and check (sexpr : sExpr)          (* expression to translate *)
 (*---------------------------------------------------------------------------*)  
   | SListLit (lst)         ->
           let var = "_" ^ (nextEntry lastTemp) in
-          let elems = List.map (fun e -> let v = check e typEnv llvmEnv builder in v) lst in
+          let elems = List.map (fun e -> let { var = var;
+                                               lvar = lvar; } = 
+                                                   check e typEnv llvmEnv builder in 
+                                         let elem = L.build_load lvar "_load" builder in
+                                         let heapd = L.build_malloc voidptr "_heapd" builder in
+                                         let _ = L.build_store elem heapd builder in
+                                         { var = var;
+                                           lvar = heapd; }) lst in
           let n = List.length lst in
-          let local = L.build_array_malloc voidptr (L.const_int i64_t (2*n)) var builder in
+          let local = L.build_array_malloc voidptr (L.const_int i64_t (2*(n + 1))) var builder in
 
           (* store null pointer in local *)
           let nullp' = (L.const_null i64_t) in
