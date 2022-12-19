@@ -968,7 +968,11 @@ and check (sexpr : sExpr)          (* expression to translate *)
               | MOD -> "%"
               | AND -> "&&"
               | OR  -> "||"
-              | EQ  -> "==") in
+              | EQ  -> "=="
+              | LT  -> "<"
+              | LTE -> "<="
+              | GT  -> ">"
+              | GTE -> ">=") in
     let var = "_" ^ (nextEntry lastTemp) in
 
     (* load vars and cast them to long long *)
@@ -989,6 +993,10 @@ and check (sexpr : sExpr)          (* expression to translate *)
               | AND -> L.build_and  ecast fcast "_res" builder
               | OR  -> L.build_or   ecast fcast "_res" builder
               | EQ  -> L.build_icmp L.Icmp.Eq ecast fcast "_res" builder
+              | LT  -> L.build_icmp L.Icmp.Slt ecast fcast "_res" builder
+              | LTE -> L.build_icmp L.Icmp.Sle ecast fcast "_res" builder
+              | GT  -> L.build_icmp L.Icmp.Sgt ecast fcast "_res" builder
+              | GTE -> L.build_icmp L.Icmp.Sge ecast fcast "_res" builder
               ) in
     let rescast = L.build_inttoptr res voidptr "_rescast" builder in
     let _ = L.build_store rescast local builder in
