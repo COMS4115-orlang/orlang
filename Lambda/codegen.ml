@@ -411,10 +411,6 @@ let cppCfunctioninst (var : string)           (* the varname of the result *)
                     = 
 
     (* get capture, add indices and remove arg *)
-    let capture = (M.fold (fun k _ acc -> k :: acc) typEnv []) in
-    let captureIndex = zipWithIndex capture in
-    let captureFiltr = List.fold_left (fun a c -> removeIndexed a c) captureIndex args in
-    
     let llvmArgs = loadCEnvExcept typEnv llvmEnv args builder in
  
     (* call the llvm_init function with the llvmargs *)
@@ -1225,7 +1221,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
         }
  | SLet (SCBinding(lhs, e), f) ->
           let name = nextEntry lastClass in
-          let vlist = List.map (fun a -> match a with | LVar(v) -> v | _ -> raise(Failure("."))) lhs in 
+          let vlist = List.map (fun (LVar(v)) -> v) lhs in 
           let rec addAllArgs m vars =
               match vars with
               | v::vs -> addAllArgs (M.add v (Scheme([], Concrete "Int")) m) vs
@@ -1259,7 +1255,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
           }
  | SLet (SMBinding(lhs, e), f) ->
           let name = nextEntry lastClass in
-          let vlist = List.map (fun a -> match a with | LVar(v) -> v | _ -> raise(Failure("."))) lhs in 
+          let vlist = List.map (fun (LVar(v)) -> v) lhs in
           let rec addAllArgs m vars =
               match vars with
               | v::vs -> addAllArgs (M.add v (Scheme([], Concrete "Int")) m) vs

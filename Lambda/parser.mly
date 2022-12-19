@@ -124,7 +124,7 @@ binding:
 | VARIABLE binding            { let b = 
                                   match $2 with
                                   | Binding(v, e, _) -> Binding(LVar($1), NoHint(Lambda(v, e)), false)
-                                  | _                -> raise(Failure("nothing"))
+                                  | _                -> raise(Failure("cannot do this with cons/tuple binding"))
                                 in b
                               }
 | LPAREN VARIABLE COMMA multVars RPAREN EQUALS expr
