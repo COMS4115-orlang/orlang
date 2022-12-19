@@ -14,6 +14,7 @@ type binop = ADD | SUB | MLT | DIV | MOD
            | AND | OR 
            | EQ | LT | LTE | GT | GTE 
            | FADD | FSUB | FMLT | FDIV
+
 type unop = NOT
 
 type expr =
