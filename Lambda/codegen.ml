@@ -795,7 +795,7 @@ and fix (name : string) arg lambdaName typEnv body =
                 ) captureParam) in
 
     (* NULL assignment *)
-    let argIndex = 1 + find arg capture in
+    let argIndex = find arg capture in
     let nullvar = L.build_alloca voidptr "_nullvar" builder in
     let _ = L.build_store (L.const_null voidptr) nullvar builder in
     let _ = llvmAssignMember allocd_struct nullvar argIndex builder in
@@ -807,10 +807,11 @@ and fix (name : string) arg lambdaName typEnv body =
           lvar = elvar; } = check e te allocd_struct builder in
 
     (* make the struct self-referential *)
-    let _ = llvmAssignMember elvar elvar
-                             (if not (M.mem lambdaName te)
-                              then 1 + argIndex
-                              else argIndex) builder in
+    let big_capture = (M.fold (fun k _ acc -> k :: acc) 
+                       (M.add lambdaName dummyScheme (M.add arg dummyScheme typEnv))
+                       []) in
+    let big_argIndex = 1 + (find arg big_capture) in
+    let _ = llvmAssignMember elvar elvar big_argIndex builder in
 
     (* call apply function *)
     let (apply, _) = applyFunc in
