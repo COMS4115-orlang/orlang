@@ -9,14 +9,6 @@ module S = Set.Make(String)
 module L = Llvm
 
 let _ =
-  let mode = (match Sys.argv with
-              | [| _ |]           -> "-llvm"
-              | [| _ ; "-c" |]    -> "-c"
-              | [| _ ; "-llvm" |] -> "-llvm"
-              | _                 -> 
-                      raise (Failure("usage: " ^ Sys.argv.(0) ^ " <mode=-c/-llvm>\n"));
-             ) in
-  
   let lexbuf = Lexing.from_channel stdin in
   let ast = Parser.topLevel Scanner.tokenize lexbuf in
   let env = M.empty in
@@ -30,8 +22,7 @@ let _ =
   let builder = L.builder_at_end context (L.entry_block func) in
 
   (* insert the body of the main function *)
-  let { code  = code;
-        var   = var ;
+  let { var   = var ;
         lvar  = lvar; } = Codegen.check sxp env (L.const_null voidptr) builder in
   
   (* get result for printing *)
@@ -55,12 +46,4 @@ let _ =
   (* return 0 *)
   let _ = L.build_ret (L.const_int i32_t 0) builder in
 
-  if mode = "-c"
-  then print_endline (prelude ^
-                      !classes ^
-                      "\nint main(){\n" ^ 
-                      code ^ 
-                      "\tprintf(\"%lld\\n\", ((long long)" ^ var ^ "));\n\
-                       \treturn 0;\n\
-                       }")
-  else print_string (Llvm.string_of_llmodule the_module)
+  print_string (Llvm.string_of_llmodule the_module)

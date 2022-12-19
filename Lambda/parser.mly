@@ -6,7 +6,7 @@
 
 %token MATCH WITH GUARD SEMICOLON 
 %token LPAREN RPAREN 
-%token LBRACKET RBRACKET COMMA
+%token LBRACKET RBRACKET COMMA GUARDDOT DOTGUARD
 %token LAMBDA ARROW DARROW
 %token PLUS MINUS TIMES DIV MOD FPLUS FMINUS FDIV FTIMES
 
@@ -28,13 +28,13 @@
 %left GUARD
 %left ELSE
 %left IN
-%left COLON
-%left DCOLON
+%right COLON DCOLON
 %left DOUBLEEQUALS LT LTE GT GTE
 %left BAND BOR
 %left BNOT
 %left PLUS MINUS FPLUS FMINUS
 %left TIMES DIV MOD FTIMES FDIV
+%left PRINTINT
 
 %start topLevel
 %type <Ast.hExpr> topLevel
@@ -155,30 +155,28 @@ expr:
                                                       referencing the same construct"))
                               }
 | LAMBDA lambda               { $2 }
-| LET binding IN expr         { NoHint(Let($2, $4)) }
-| expr PLUS  expr            { NoHint(Binop(ADD, $1, $3)) }
-| expr MINUS expr            { NoHint(Binop(SUB, $1, $3)) }
-| expr TIMES expr            { NoHint(Binop(MLT, $1, $3)) }
-| expr DIV   expr            { NoHint(Binop(DIV, $1, $3)) }
-| expr MOD   expr            { NoHint(Binop(MOD, $1, $3)) }
-| expr FPLUS  expr           { NoHint(Binop(FADD, $1, $3)) }
-| expr FMINUS expr           { NoHint(Binop(FSUB, $1, $3)) }
-| expr FTIMES expr           { NoHint(Binop(FMLT, $1, $3)) }
-| expr FDIV   expr           { NoHint(Binop(FDIV, $1, $3)) }
-| expr BAND  expr            { NoHint(Binop(AND, $1, $3)) }
-| expr BOR   expr            { NoHint(Binop(OR, $1, $3)) }
-| expr COLON expr            { NoHint(LCons($1, $3)) }
-| expr DOUBLEEQUALS   expr   { NoHint(Binop(EQ, $1, $3)) }
-| expr LT    expr            { NoHint(Binop(LT, $1, $3)) }
-| expr LTE   expr            { NoHint(Binop(LTE, $1, $3)) }
-| expr GT    expr            { NoHint(Binop(GT, $1, $3)) }
-| expr GTE   expr            { NoHint(Binop(GTE, $1, $3)) }
-| BNOT  expr                 { NoHint(Unop(NOT, $2)) }
+| letBinding IN expr          { NoHint(Let($1, $3)) }
+| expr PLUS  expr             { NoHint(Binop(ADD, $1, $3)) }
+| expr MINUS expr             { NoHint(Binop(SUB, $1, $3)) }
+| expr TIMES expr             { NoHint(Binop(MLT, $1, $3)) }
+| expr DIV   expr             { NoHint(Binop(DIV, $1, $3)) }
+| expr MOD   expr             { NoHint(Binop(MOD, $1, $3)) }
+| expr FPLUS  expr            { NoHint(Binop(FADD, $1, $3)) }
+| expr FMINUS expr            { NoHint(Binop(FSUB, $1, $3)) }
+| expr FTIMES expr            { NoHint(Binop(FMLT, $1, $3)) }
+| expr FDIV   expr            { NoHint(Binop(FDIV, $1, $3)) }
+| expr BAND  expr             { NoHint(Binop(AND, $1, $3)) }
+| expr BOR   expr             { NoHint(Binop(OR, $1, $3)) }
+| expr COLON expr             { NoHint(LCons($1, $3)) }
+| expr DOUBLEEQUALS   expr    { NoHint(Binop(EQ, $1, $3)) }
+| expr LT    expr             { NoHint(Binop(LT, $1, $3)) }
+| expr LTE   expr             { NoHint(Binop(LTE, $1, $3)) }
+| expr GT    expr             { NoHint(Binop(GT, $1, $3)) }
+| expr GTE   expr             { NoHint(Binop(GTE, $1, $3)) }
+| BNOT  expr                  { NoHint(Unop(NOT, $2)) }
 | IF expr THEN expr ELSE expr { NoHint(If($2, $4, $6)) }
 | MATCH expr WITH patternMatrix SEMICOLON { patternsToIfElse(PatternMatch($2, $4)) }
-| LBRACKET lst RBRACKET       { NoHint(ListLit($2)) }
-| GUARD expr GUARD            { NoHint(LLen($2)) }
-| PRINTINT LPAREN expr LPAREN { NoHint(PrintInt($3)) }
+| PRINTINT expr               { NoHint(PrintInt($2)) }
 
 multVars:
 | VARIABLE COMMA multVars { (LVar($1))::($3) }
@@ -192,10 +190,6 @@ lst:
 |                             { [] }
 | expr                        { [$1] }
 | expr COMMA lst              { ($1)::($3) }
-
-exprList:
-| expr                { [$1] }
-| expr COMMA exprList { ($1)::($3) }
 
 patternMatrix: 
 | GUARD expr DARROW expr               { [PatternRow(Pattern($2), $4)] }
@@ -217,3 +211,5 @@ arg:
 | FALSE                       { NoHint(BoolLit(0)) }
 | VARIABLE                    { NoHint(Var($1)) }
 | LPAREN expr RPAREN          { $2 }
+| LBRACKET lst RBRACKET       { NoHint(ListLit($2)) }
+| GUARDDOT expr DOTGUARD      { NoHint(LLen($2)) }

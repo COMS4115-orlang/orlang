@@ -9,8 +9,7 @@ type evalResult =
     sub : substitution;
   }
 type codegenResult = 
-  { code : string;
-    var  : string;
+  { var  : string;
     lvar : L.llvalue;
   }
 

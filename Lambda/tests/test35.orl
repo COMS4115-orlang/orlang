@@ -11,5 +11,5 @@ let fibList n =
 
 let main =
   let fl = fibList 10 in
-  |fl|
+  |.fl.|
 

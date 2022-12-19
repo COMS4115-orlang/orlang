@@ -139,8 +139,7 @@ let llvmAssignMember (allocd_struct : L.llvalue) (* llvalue of structure *)
     ignore(L.build_store argval elem_ptr builder)
 
 (* function that performs function application *)
-let applyFunc : (L.llvalue *   (* llvalue of the apply function *)
-                 string) =     (* C code associated with it *)
+let applyFunc : L.llvalue =    (* llvalue of the apply function *)
     (* function signature and param space *)
     let (func, builder, f, arg) = 
         (match llvmFuncDef "_apply" ["f"; "arg"] with
@@ -160,11 +159,7 @@ let applyFunc : (L.llvalue *   (* llvalue of the apply function *)
     let retval = L.build_call f_fptr (Array.of_list [arg1; arg2]) "retval" builder in
     let _ = L.build_ret retval builder in
 
-    (* C code generation *)
-    (func, 
-    "void* apply(void* f, void* arg){\n\
-         \treturn (**((void* (**)(void*, void*)) f))(f, arg);\n\
-     }\n")
+    func
 
 (* generate a call to the `apply` function with arguments f and arg *)
 let callApply (var : string)          (* name of result *)
@@ -173,10 +168,9 @@ let callApply (var : string)          (* name of result *)
               (argvar : string)       (* name of argument *)
               (arglvar : L.llvalue)   (* llvalue of argument *)
               (builder : L.llbuilder) (* builder where to insert this *)
-              : (L.llvalue *          (* llvalue of result *)
-                 string) =            (* C code *)
+              : L.llvalue =           (* llvalue of result *)
     (* get llvalue of apply function and alloc space for result *)
-    let (apply, _) = applyFunc in
+    let apply = applyFunc in
     let local = L.build_alloca voidptr var builder in
     
     (* call apply function and store result in llvalue *)
@@ -185,13 +179,10 @@ let callApply (var : string)          (* name of result *)
     let call = L.build_call apply [|fload; argload|] "call" builder in
     let _ = L.build_store call local builder in
 
-    let code = "\t" ^ var ^ " = apply(" ^ fvar ^ ", " ^ argvar ^ ");\n" in
-    (local, 
-    "\tvoid* " ^ var ^ ";\n" ^ code)
+    local
 
 (* function that performs function application *)
-let ifFunc : (L.llvalue *   (* llvalue of the if function *)
-              string) =     (* C code associated with it *)
+let ifFunc : L.llvalue =    (* llvalue of the if function *)
     (* function signature and param space *)
     let (func, builder, c, t, e) = 
         (match llvmFuncDef "_if_func" ["c"; "t"; "e"] with
@@ -205,20 +196,20 @@ let ifFunc : (L.llvalue *   (* llvalue of the if function *)
     (* then block *)
     let then_bb = L.append_block context "then" func in
     let then_b = L.builder_at_end context then_bb in
-    let (res, then_assign) = callApply "_res"
-                                       "t" t 
-                                       "NULL" nullvar
-                                       then_b in
+    let res = callApply "_res"
+                        "t" t 
+                        "NULL" nullvar
+                        then_b in
     let loadres = L.build_load res "_loadres" then_b in
     let _ = L.build_ret loadres then_b in
 
     (* else block *)
     let else_bb = L.append_block context "else" func in
     let else_b = L.builder_at_end context else_bb in
-    let (res, else_assign) = callApply "_res"
-                                       "e" e
-                                       "NULL" nullvar
-                                       else_b in
+    let res = callApply "_res"
+                        "e" e
+                        "NULL" nullvar
+                        else_b in
     let loadres = L.build_load res "_loadres" else_b in
     let _ = L.build_ret loadres else_b in
     
@@ -227,18 +218,7 @@ let ifFunc : (L.llvalue *   (* llvalue of the if function *)
     let boolc = L.build_icmp L.Icmp.Eq loadc (L.const_null voidptr) "_res" builder in
     let _ = L.build_cond_br boolc else_bb then_bb builder in
 
-    (* C code generation *)
-    (func, 
-    "void* _if_func(void* c, void* t, void* e){\n\
-         \tif(c){\n\
-         \t" ^ then_assign ^ "\
-         \t\t return _res;\n\
-         \t}\n\
-         \telse{\n\
-         \t" ^ else_assign ^ "\
-         \t\t return _res;\n\
-         \t}\n\
-     }\n")
+    func
 
 let lenFunc : L.llvalue = 
     let (func, builder, c) = 
@@ -276,7 +256,8 @@ let lenFunc : L.llvalue =
 
     (* goto next ptr *)
     let loadc = L.build_load cptr "_loadcmm" next_b in
-    let c' = L.build_pointercast loadc voidptrptr "_cptr" next_b in (* cast to void** for some reason *)
+    let c' = L.build_pointercast loadc voidptrptr "_cptr" next_b in 
+    (* cast to void** for some reason *)
     let sptr'   = L.build_gep c' [|(L.const_int i64_t 1)|] "" next_b in
     let sptrval = L.build_load sptr' "_sptrvalx" next_b in (* get pointer to val *)
     let _ = L.build_store sptrval cptr next_b in
@@ -294,15 +275,6 @@ let lenFunc : L.llvalue =
     let _ = L.build_br cond_bb builder in
     func
 
-(* fixed includes and classes *)
-let prelude : string = 
-    let (_, applyCode) = applyFunc in
-    let (_, ifCode) = ifFunc in
-    "#include<stdio.h>\n\
-     #include <stdlib.h>\n" ^
-    applyCode ^
-    ifCode
-
 (* find the index of an element in a list *)
 let find x ys = 
     let rec helper x index = function
@@ -313,10 +285,10 @@ let find x ys =
 
 (* load all the variables in the env except for one *)
 let loadCEnvExcept (typEnv : typeEnvironm)  (* the type environment *)
-                  (llvmEnv : L.llvalue)    (* its associated llvalue *)
-                  (excepts : string list)  (* variables to exclude *)
-                  (builder : L.llbuilder)  (* builder for instructions *)
-                  : L.llvalue list =       (* list of loaded vars *)
+                   (llvmEnv : L.llvalue)    (* its associated llvalue *)
+                   (excepts : string list)  (* variables to exclude *)
+                   (builder : L.llbuilder)  (* builder for instructions *)
+                   : L.llvalue list =       (* list of loaded vars *)
     let capture = (M.fold (fun k _ acc -> k :: acc) typEnv []) in
     let captureIndex = zipWithIndex capture in
     let captureFiltr = List.fold_left (fun a c -> removeIndexed a c) captureIndex excepts in
@@ -373,36 +345,16 @@ let cppfunctioninst (var : string)           (* the varname of the result *)
                     (typEnv : typeEnvironm)  (* the type environment *)
                     (llvmEnv : L.llvalue)    (* llvalue of the "env" *)
                     (builder : L.llbuilder)  (* builder where to insert this *)
-                    : (L.llvalue *           (* llvalue of the result *)
-                       string) =             (* C code *)
+                    : L.llvalue =            (* llvalue of the result *)
 
-    (* get capture, add indices and remove arg *)
-    let capture = (M.fold (fun k _ acc -> k :: acc) typEnv []) in
-    let captureIndex = zipWithIndex capture in
-    let captureFiltr = removeIndexed captureIndex arg in
-    let assigns = 
-            List.fold_left 
-              (^) ""
-              (List.map (fun (v, currIndex) ->
-                    ", *((void** ) env + " ^ (string_of_int currIndex) ^ ")")
-              captureFiltr) in
-    
     let llvmArgs = loadEnvExcept typEnv llvmEnv arg builder in
  
     (* call the llvm_init function with the llvmargs *)
     let local = L.build_alloca voidptr var builder in
     let call = L.build_call llvm_init (Array.of_list llvmArgs) "call" builder in
     let _ = L.build_store call local builder in
-
-    (* C code generation *)
-    let arg = if String.length assigns > 0 
-              then String.sub assigns 2 (String.length assigns - 2)
-              else assigns in
     
-    (local, 
-         "\tvoid* " ^ var ^ " = " ^ (mangleInit name) ^ 
-            "(" ^ arg  ^ ");\n"
-    )
+    local
 
 (* instantiate a class corresponding to a function *)
 let cppCfunctioninst (var : string)           (* the varname of the result *)
@@ -414,12 +366,6 @@ let cppCfunctioninst (var : string)           (* the varname of the result *)
                     (builder : L.llbuilder)  (* builder where to insert this *)
                     : L.llvalue              (* llvalue of the result *)
                     = 
-
-    (* get capture, add indices and remove arg *)
-    let capture = (M.fold (fun k _ acc -> k :: acc) typEnv []) in
-    let captureIndex = zipWithIndex capture in
-    let captureFiltr = List.fold_left (fun a c -> removeIndexed a c) captureIndex args in
-    
     let llvmArgs = loadCEnvExcept typEnv llvmEnv args builder in
  
     (* call the llvm_init function with the llvmargs *)
@@ -436,8 +382,7 @@ let rec cppfunction (name : string)           (* name of the function *)
                     (body : (sExpr *          (* sExpr of function body *)
                              typeEnvironm))   (* env to evaluate the body in *)
                     (typEnv : typeEnvironm)   (* the type environment *)
-                    : (L.llvalue *            (* llvalue of the init function *)
-                       string) =              (* C code *)
+                    : L.llvalue =             (* llvalue of the init function *)
     let dummyScheme = Scheme([], (Concrete "Int")) in
     let capture = (M.fold (fun k _ acc -> k :: acc) 
                    (M.add arg dummyScheme typEnv) 
@@ -475,8 +420,7 @@ let rec cppfunction (name : string)           (* name of the function *)
 
     (* insert the body of the call function *)
     let (e, te) = body in
-    let { code  = code; 
-          var   = evar;
+    let { var   = evar;
           lvar  = elvar; } = check e te allocd_struct builder in
 
     (* load result and return it *)
@@ -511,42 +455,8 @@ let rec cppfunction (name : string)           (* name of the function *)
     let struct_load = L.build_load allocd_struct "struct_load" builder in
     let struct_cast = L.build_bitcast struct_load voidptr "struct_cast" builder in
     ignore(L.build_ret struct_cast builder);
-    
-(*---------------------------------------------------------------------------*)  
-    (* C code generation *)
-    let ccapture = sep ", *" capture in
-    let vcapture = sep ", void* " (remove arg capture) in
-    let vcapture = if (String.length vcapture) > 0 
-                   then "void* " ^ vcapture 
-                   else vcapture in
-    let assigns = 
-            List.fold_left 
-              (^) ""
-              (List.map (fun (v, currIndex) -> (
-                  "\t*((void** ) reserved + " ^ (string_of_int currIndex) ^ 
-                  ") = " ^ v ^ ";\n")) 
-               captureFiltr) in
 
-    (fn_init, 
-    "struct " ^ (mangleName name) ^ "{\n\
-         \tvoid* (*call)(void*, void*);\n\
-         \tvoid *" ^ ccapture ^ ";\n\
-     };\n\
-     void* " ^ (mangleCall name) ^ "(void* genenv, void* " ^ arg ^ "){\n\
-         \tstruct " ^ (mangleName name) ^ 
-                 " *env = (struct " ^ (mangleName name) ^ "* ) genenv;\n\
-         \t*((void** ) env + " ^ (string_of_int argIndex) ^ ") = " ^ arg ^ ";\n"
-             ^ code ^ 
-         "\treturn " ^ evar ^ ";\n\
-     }\n\
-     void* " ^ (mangleInit name) ^ "("^ vcapture ^ "){\n\
-        \tstruct " ^ (mangleName name) ^ "* reserved = \
-            (struct " ^ (mangleName name) ^ "*)malloc(sizeof(*reserved));\n\
-        \t*(void* (**) (void*, void* )) reserved = &" ^ (mangleCall name) ^ ";\n" ^
-        assigns ^ 
-        "\treturn (void* ) reserved;\n\
-     }\n"
-    )
+    fn_init
 
 (* generates the C code for a function;     
    acts essentially as a lambda function written in C: each function has a
@@ -586,15 +496,20 @@ and cppCfunction (name : string)           (* name of the function *)
     
     let num_args = List.length args in
     let larg' = L.build_load llvm_arg "_sptrval" builder in (* get pointer to val *)
-    let larg  = L.build_pointercast larg' voidptrptr "_larg" builder in (* cast to void** for some reason *)
+    let larg  = L.build_pointercast larg' voidptrptr "_larg" builder in 
+    (* cast to void** for some reason *)
     let rec unpack llargs n acc =
         (if (n > 1)
          then 
-           let sptrval' = L.build_load llargs "_sptrval" builder in (* get pointer to val *)
-           let vptr1 = L.build_pointercast sptrval' voidptrptr "_vptr" builder in (* cast to void** for some reason *)
+           let sptrval' = L.build_load llargs "_sptrval" builder in 
+           (* get pointer to val *)
+           let vptr1 = L.build_pointercast sptrval' voidptrptr "_vptr" builder in 
+           (* cast to void** for some reason *)
            let sptr'   = L.build_gep llargs [|(L.const_int i64_t 1)|] "" builder in
-           let sptrval = L.build_load sptr' "_sptrval" builder in (* get pointer to val *)
-           let vptr' = L.build_pointercast sptrval voidptrptr "_vptr" builder in (* cast to void** for some reason *)
+           let sptrval = L.build_load sptr' "_sptrval" builder in 
+           (* get pointer to val *)
+           let vptr' = L.build_pointercast sptrval voidptrptr "_vptr" builder in 
+           (* cast to void** for some reason *)
            unpack vptr' (n - 1) (vptr1 :: acc)
          else
            let local = L.build_alloca voidptr "" builder in
@@ -616,8 +531,7 @@ and cppCfunction (name : string)           (* name of the function *)
     
     (* insert the body of the call function *)
     let (e, te) = body in
-    let { code  = code; 
-          var   = evar;
+    let { var   = evar;
           lvar  = elvar; } = check e te allocd_struct builder in
 
     (* load result and return it *)
@@ -692,15 +606,20 @@ and cppMfunction (name : string)           (* name of the function *)
     
     let num_args = List.length args in
     let larg' = L.build_load llvm_arg "_sptrval" builder in (* get pointer to val *)
-    let larg  = L.build_pointercast larg' voidptrptr "_larg" builder in (* cast to void** for some reason *)
+    let larg  = L.build_pointercast larg' voidptrptr "_larg" builder in 
+    (* cast to void** for some reason *)
     let rec unpack llargs n acc =
         (if (n > 0)
          then 
-           let sptrval' = L.build_load llargs "_sptrval" builder in (* get pointer to val *)
-           let vptr1 = L.build_pointercast sptrval' voidptrptr "_vptr" builder in (* cast to void** for some reason *)
+           let sptrval' = L.build_load llargs "_sptrval" builder in 
+           (* get pointer to val *)
+           let vptr1 = L.build_pointercast sptrval' voidptrptr "_vptr" builder in 
+           (* cast to void** for some reason *)
            let sptr'   = L.build_gep llargs [|(L.const_int i64_t 1)|] "" builder in
-           let sptrval = L.build_load sptr' "_sptrval" builder in (* get pointer to val *)
-           let vptr' = L.build_pointercast sptrval voidptrptr "_vptr" builder in (* cast to void** for some reason *)
+           let sptrval = L.build_load sptr' "_sptrval" builder in 
+           (* get pointer to val *)
+           let vptr' = L.build_pointercast sptrval voidptrptr "_vptr" builder in 
+           (* cast to void** for some reason *)
            unpack vptr' (n - 1) (vptr1 :: acc)
          else
            List.rev acc) in
@@ -719,8 +638,7 @@ and cppMfunction (name : string)           (* name of the function *)
     
     (* insert the body of the call function *)
     let (e, te) = body in
-    let { code  = code; 
-          var   = evar;
+    let { var   = evar;
           lvar  = elvar; } = check e te allocd_struct builder in
 
     (* load result and return it *)
@@ -807,8 +725,7 @@ and fix (name : string) arg lambdaName typEnv body =
 
     (* insert body of the call function *)
     let (e, te) = body in
-    let { code = codee;
-          var  = evar; 
+    let { var  = evar; 
           lvar = elvar; } = check e te allocd_struct builder in
 
     (* make the struct self-referential *)
@@ -818,7 +735,7 @@ and fix (name : string) arg lambdaName typEnv body =
                               else argIndex) builder in
 
     (* call apply function *)
-    let (apply, _) = applyFunc in
+    let apply = applyFunc in
     let local = L.build_alloca voidptr "_tmp" builder in
     let fload = L.build_load f "_fload" builder in
     let eload = L.build_load elvar "_eload" builder in
@@ -829,38 +746,7 @@ and fix (name : string) arg lambdaName typEnv body =
     let retval = L.build_load local "_ret" builder in
     let _ = L.build_ret retval builder in
 
-(*---------------------------------------------------------------------------*)  
-     (* C code generation *)
-
-    let ccapture = sep ", *" capture in
-    let vcapture = pref ", void*" (remove arg capture) in
-    let assigns = 
-            List.fold_left 
-              (^) ""
-              (List.map (fun (v, currIndex) -> (
-                  "\t*((void** ) env + " ^ (string_of_int currIndex) ^ 
-                  ") = " ^ v ^ ";\n")) 
-               captureFiltr) in
-
-    (fn_app, 
-     "struct " ^ mangleEnv name ^ "{\n\
-          \t void* (*call) (void*, void*);\n\
-          \tvoid *" ^ ccapture ^ ";\n\
-      };\n\
-      void* " ^ mangleApp name ^ "(void* f" ^ vcapture ^ "){\n\
-          \tstruct " ^ mangleEnv name ^ "* env = malloc(sizeof(*env));\n"
-          ^ assigns ^
-         "\t*((void**) env + " ^ (string_of_int argIndex) ^ ") = NULL;\n"
-          ^ codee   ^ 
-         "\t*(void** )(" ^ evar ^ " + " 
-                 (*^ string_of_int (1 + List.length capture) ^*)
-                 ^ string_of_int (if not (M.mem lambdaName te)
-                                 then 1 + argIndex
-                                 else argIndex) ^
-                 " * sizeof(void* )) = " ^ evar ^ ";\n\
-          \treturn apply(f, " ^ evar ^ ");\n\
-      }\n"
-    )
+    fn_app
 
 and check (sexpr : sExpr)          (* expression to translate *)
           (typEnv : typeEnvironm)  (* type environment *)
@@ -887,11 +773,9 @@ and check (sexpr : sExpr)          (* expression to translate *)
           (* store result in allocd space *)
           let _ = L.build_store elem_load local builder in
 
-              { code  = "\tvoid* " ^ var ^ 
-                        " = (*((void**) env + " ^ string_of_int (1 + index) ^ "));\n";
-                var   = var;
-                lvar  = local;
-              }
+          { var   = var;
+            lvar  = local;
+          }
 (*---------------------------------------------------------------------------*)  
   | SIntLit (i)          ->
           let var = "_" ^ (nextEntry lastTemp) in
@@ -903,8 +787,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
                                        "const" builder in
           let _ = L.build_store const local builder in
 
-          { code  = "\tvoid* " ^ var ^ " = ((void* ) " ^ string_of_int i ^ ");\n";
-            var   = var;
+          { var   = var;
             lvar  = local;
           }
 (*---------------------------------------------------------------------------*)  
@@ -918,8 +801,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
                                        "const" builder in
           let _ = L.build_store const local builder in
 
-          { code  = "\tvoid* " ^ var ^ " = ((void* ) " ^ string_of_int b ^ ");\n";
-            var   = var;
+          { var   = var;
             lvar  = local;
           }
 (*---------------------------------------------------------------------------*)  
@@ -948,31 +830,15 @@ and check (sexpr : sExpr)          (* expression to translate *)
           let sptr' = L.build_pointercast sptr voidptr "" builder in
           let _ = L.build_store sptr' local' builder in
 
-          { code  = ""; (* add later? *)
-            var   = var;
+          { var   = var;
             lvar  = local';
           }
 (*---------------------------------------------------------------------------*)  
   | SBinop (b, e, f)     ->
-    let { code  = codee; 
-          var   = evar; 
+    let { var   = evar; 
           lvar  = elvar; } = check e typEnv llvmEnv builder in
-    let { code  = codef;
-          var   = fvar; 
+    let { var   = fvar; 
           lvar  = flvar; } = check f typEnv llvmEnv builder in
-    let sym = (match b with
-              | ADD -> "+"
-              | SUB -> "-"
-              | MLT -> "*"
-              | DIV -> "/"
-              | MOD -> "%"
-              | AND -> "&&"
-              | OR  -> "||"
-              | EQ  -> "=="
-              | LT  -> "<"
-              | LTE -> "<="
-              | GT  -> ">"
-              | GTE -> ">=") in
     let var = "_" ^ (nextEntry lastTemp) in
 
     (* load vars and cast them to long long *)
@@ -1001,20 +867,14 @@ and check (sexpr : sExpr)          (* expression to translate *)
     let rescast = L.build_inttoptr res voidptr "_rescast" builder in
     let _ = L.build_store rescast local builder in
 
-    { code = codee ^ 
-             codef ^ 
-	         "\tvoid* " ^ var ^ " = (void* ) ((long long)((long long) " ^ evar ^ " " 
-                        ^ sym ^ " (long long) " ^ fvar ^ "));\n";
-      var  = var;
+    { var  = var;
       lvar = local;
     }
 (*---------------------------------------------------------------------------*)  
   | SLCons (e, f)    ->
-    let { code  = codee; 
-          var   = evar; 
+    let { var   = evar; 
           lvar  = elvar; } = check e typEnv llvmEnv builder in
-    let { code  = codef;
-          var   = fvar; 
+    let { var   = fvar; 
           lvar  = flvar; } = check f typEnv llvmEnv builder in
     let var = "_" ^ (nextEntry lastTemp) in
 
@@ -1032,37 +892,33 @@ and check (sexpr : sExpr)          (* expression to translate *)
     let res = L.build_pointercast local voidptr "" builder in
     let _ = L.build_store res resptr builder in
 
-    { code = "";
-      var  = var;
+    { var  = var;
       lvar = resptr;
     }
 (*---------------------------------------------------------------------------*)  
   | SLLen (e)    ->
-    let { code  = codee; 
-          var   = evar; 
+    let { var   = evar; 
           lvar  = elvar; } = check e typEnv llvmEnv builder in
     let var = "_" ^ (nextEntry lastTemp) in
     let lenfunc = lenFunc in
 
-    let eptr = L.build_pointercast elvar voidptrptr "_eeeeptr" builder in (* cast to void** for some reason *)
+    let eptr = L.build_pointercast elvar voidptrptr "_eeeeptr" builder in 
+    (* cast to void** for some reason *)
     let loadeptr = L.build_load eptr "_loadddddd" builder in
-    let xptr = L.build_inttoptr loadeptr voidptr "_xptrdddd" builder in (* cast to void** for some reason *)
+    let xptr = L.build_inttoptr loadeptr voidptr "_xptrdddd" builder in 
+    (* cast to void** for some reason *)
     (* result stuff *)
     let local = L.build_alloca voidptr var builder in
     let call = L.build_call lenfunc [|xptr|] "callddd" builder in
     let _ = L.build_store call local builder in
 
-    { code = "";
-      var  = var;
+    { var  = var;
       lvar = local;
     }
 (*---------------------------------------------------------------------------*)  
   | SUnop (b, e)     ->
-    let { code  = codee; 
-          var   = evar; 
+    let { var   = evar; 
           lvar  = elvar; } = check e typEnv llvmEnv builder in
-    let sym = match b with
-              | NOT -> "!" in
     let var = "_" ^ (nextEntry lastTemp) in
 
     (* load var and cast it to long long *)
@@ -1077,10 +933,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
     let rescast = L.build_inttoptr res voidptr "_rescast" builder in
     let _ = L.build_store rescast local builder in
     
-    { code = codee ^ 
-             "\tvoid* " ^ var ^ 
-                        " = (void* )((long long)" ^ sym ^ "((long long) " ^ evar ^ "));\n";
-      var  = var;
+    { var  = var;
       lvar = local;
     }
 (*---------------------------------------------------------------------------*)  
@@ -1088,21 +941,18 @@ and check (sexpr : sExpr)          (* expression to translate *)
     (* generate code that produces the condition,
        the then value (wrapped in a lambda) and
        the else value (wrapped in a lambda) *)
-    let { code  = codec; 
-          var   = cvar; 
+    let { var   = cvar; 
           lvar  = clvar; } = check c typEnv llvmEnv builder in
-    let { code  = codet; 
-          var   = tvar; 
+    let { var   = tvar; 
           lvar  = tlvar; } = check t typEnv llvmEnv builder in
-    let { code  = codee; 
-          var   = evar; 
+    let { var   = evar; 
           lvar  = elvar; } = check e typEnv llvmEnv builder in
 
     let var = "_" ^ (nextEntry lastTemp) in
     (* allocate space for result *)
     let local = L.build_alloca voidptr var builder in
 
-    let (_if, _) = ifFunc in
+    let _if = ifFunc in
     
     (* call apply function and store result in llvalue *)
     let cload = L.build_load clvar "_cload" builder in
@@ -1111,11 +961,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
     let call = L.build_call _if [|cload; tload; eload|] "call" builder in
     let _ = L.build_store call local builder in
 
-    { code = codec ^
-             codet ^
-             codee ^
-             "\tvoid* " ^ var ^ " = _if_func(" ^ cvar ^ ", " ^ tvar ^ ", " ^ evar ^");\n";
-      var  = var;
+    { var  = var;
       lvar = local;
     }
 (*---------------------------------------------------------------------------*)  
@@ -1125,39 +971,30 @@ and check (sexpr : sExpr)          (* expression to translate *)
           
           (* generate the code for the structure,
              its constructor and its call operator *)
-          let (llvm_init, func_snippet) = cppfunction name v (e, typEnvNew) typEnv in
-          classes := !classes ^ 
-                     func_snippet;
+          let llvm_init = cppfunction name v (e, typEnvNew) typEnv in
           
           (* instantiate the function structure *)
           let var = "_" ^ (nextEntry lastTemp) in
-          let (lvar, inst_snippet) = 
-               cppfunctioninst var name llvm_init v typEnv llvmEnv builder in
-          { code  = inst_snippet;
-            var   = var;
+          let lvar = cppfunctioninst var name llvm_init v typEnv llvmEnv builder in
+          { var   = var;
             lvar  = lvar;
           }
 (*---------------------------------------------------------------------------*)  
   | SCall (f, arg)       -> 
           (* generate the code that produces the function *)
-          let { code  = codef; 
-                var   = fvar; 
+          let { var   = fvar; 
                 lvar  = flvar; } = check f typEnv llvmEnv builder in 
           (* generate the code that produces the argument *)
-          let { code  = codearg;
-                var   = argvar; 
+          let { var   = argvar; 
                 lvar  = arglvar; } = check arg typEnv llvmEnv builder in
           (* call apply on the function and the argument *)
           let var = "_" ^ (nextEntry lastTemp) in
-          let (local, apply_snippet) = callApply var 
-                                                 fvar flvar 
-                                                 argvar arglvar 
-                                                 builder in
+          let local = callApply var 
+                                fvar flvar 
+                                argvar arglvar 
+                                builder in
 
-          { code  = codef ^ 
-                    codearg ^ 
-                    apply_snippet;
-            var   = var;
+          { var   = var;
             lvar  = local;
           }
 (*---------------------------------------------------------------------------*)  
@@ -1168,31 +1005,24 @@ and check (sexpr : sExpr)          (* expression to translate *)
           (* let v = e in f ---> (\v -> f)(e) *)
           (* generate the code for the structure,
              its constructor and its call operator *)
-          let (llvm_init, func_snippet) = cppfunction name v (f, typEnvNew) typEnv in
-          classes := !classes ^ 
-                     func_snippet;
+          let llvm_init = cppfunction name v (f, typEnvNew) typEnv in
           
           (* generate the code that produces e *)
-          let { code  = codee; 
-                var   = evar; 
+          let { var   = evar; 
                 lvar  = elvar; } = check e typEnv llvmEnv builder in
 
           (* instantiate the function structure with capture *)
           let tmp = "_" ^ (nextEntry lastTemp) in
-          let (ltmp, inst_snippet) = 
-                     cppfunctioninst tmp name llvm_init v typEnv llvmEnv builder in
+          let ltmp = cppfunctioninst tmp name llvm_init v typEnv llvmEnv builder in
           
           (* apply e to the function *)
           let var = "_" ^ (nextEntry lastTemp) in
-          let (local, apply_snippet) = callApply var 
-                                                 tmp ltmp 
-                                                 evar elvar  (* argvar arglvar *) 
-                                                 builder in
+          let local = callApply var 
+                                tmp ltmp 
+                                evar elvar  (* argvar arglvar *) 
+                                builder in
 
-          { code  = codee ^
-                    inst_snippet ^
-                    apply_snippet;
-            var   = var;
+          { var   = var;
             lvar  = local;
           }
 (*---------------------------------------------------------------------------*)  
@@ -1204,20 +1034,12 @@ and check (sexpr : sExpr)          (* expression to translate *)
         let name = nextEntry lastClass in
         let typEnvNew = M.add v (Scheme ([], Concrete "Int")) typEnv in
 
-        let (llvm_init, init_snippet) = cppfunction name v (f, typEnvNew) typEnv in
-        let (llvm_app, app_snippet) = fix name v w typEnv (e, typEnvNew) in
-        classes := !classes ^ 
-                   init_snippet ^
-                   app_snippet;
-
+        let llvm_init = cppfunction name v (f, typEnvNew) typEnv in
+        let llvm_app = fix name v w typEnv (e, typEnvNew) in
         
         (* special code generation for recursive let-bindings *)
-        let capture = (M.fold (fun k _ acc -> k :: acc) typEnv []) in
-        let acapture = pref ", env->" (remove v capture) in
-                    
         let tmp = "_" ^ (nextEntry lastTemp) in
-        let (ltmp, inst_snippet) = 
-                     cppfunctioninst tmp name llvm_init v typEnv llvmEnv builder in
+        let ltmp = cppfunctioninst tmp name llvm_init v typEnv llvmEnv builder in
 
         (* allocate space for result *)
         let var = "_" ^ (nextEntry lastTemp) in
@@ -1229,15 +1051,12 @@ and check (sexpr : sExpr)          (* expression to translate *)
         let call = L.build_call llvm_app (Array.of_list llvmArgs) "call" builder in
         let _ = L.build_store call local builder in
 
-        { code  = inst_snippet ^ 
-                  "\tvoid* " ^ var ^ " = " ^ 
-                       (mangleApp name) ^ "(" ^ tmp ^ acapture ^ ");\n";
-          var   = var;
+        { var   = var;
           lvar  = local;
         }
  | SLet (SCBinding(lhs, e), f) ->
           let name = nextEntry lastClass in
-          let vlist = List.map (fun a -> match a with | LVar(v) -> v | _ -> raise(Failure("."))) lhs in 
+          let vlist = List.map (fun (LVar v) -> v) lhs in 
           let rec addAllArgs m vars =
               match vars with
               | v::vs -> addAllArgs (M.add v (Scheme([], Concrete "Int")) m) vs
@@ -1250,8 +1069,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
           let llvm_init = cppCfunction name vlist (f, typEnvNew) typEnv in
           
           (* generate the code that produces e *)
-          let { code  = codee; 
-                var   = evar; 
+          let { var   = evar; 
                 lvar  = elvar; } = check e typEnv llvmEnv builder in
 
           (* instantiate the function structure with capture *)
@@ -1260,18 +1078,17 @@ and check (sexpr : sExpr)          (* expression to translate *)
           
           (* apply e to the function *)
           let var = "_" ^ (nextEntry lastTemp) in
-          let (local, apply_snippet) = callApply var 
-                                                 tmp ltmp 
-                                                 evar elvar  (* argvar arglvar*) 
-                                                 builder in
+          let local = callApply var 
+                                tmp ltmp 
+                                evar elvar  (* argvar arglvar*) 
+                                builder in
 
-          { code  = "";
-            var   = var;
+          { var   = var;
             lvar  = local;
           }
  | SLet (SMBinding(lhs, e), f) ->
           let name = nextEntry lastClass in
-          let vlist = List.map (fun a -> match a with | LVar(v) -> v | _ -> raise(Failure("."))) lhs in 
+          let vlist = List.map (fun (LVar v) -> v) lhs in 
           let rec addAllArgs m vars =
               match vars with
               | v::vs -> addAllArgs (M.add v (Scheme([], Concrete "Int")) m) vs
@@ -1284,8 +1101,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
           let llvm_init = cppMfunction name vlist (f, typEnvNew) typEnv in
           
           (* generate the code that produces e *)
-          let { code  = codee; 
-                var   = evar; 
+          let { var   = evar; 
                 lvar  = elvar; } = check e typEnv llvmEnv builder in
 
           (* instantiate the function structure with capture *)
@@ -1294,13 +1110,12 @@ and check (sexpr : sExpr)          (* expression to translate *)
           
           (* apply e to the function *)
           let var = "_" ^ (nextEntry lastTemp) in
-          let (local, apply_snippet) = callApply var 
-                                                 tmp ltmp 
-                                                 evar elvar  (* argvar arglvar*) 
-                                                 builder in
+          let local = callApply var 
+                                tmp ltmp 
+                                evar elvar  (* argvar arglvar*) 
+                                builder in
 
-          { code  = "";
-            var   = var;
+          { var   = var;
             lvar  = local;
           }
 

@@ -49,6 +49,8 @@ rule tokenize = parse
 | "with" { WITH }
 | "printInt" { PRINTINT }
 | "|"   { GUARD }
+| "|."   { GUARDDOT }
+| ".|"   { DOTGUARD }
 | ";"   { SEMICOLON }
 | "otherwise"   { OTHERWISE }
 | digit+ as lit { LITERAL(int_of_string lit) }
