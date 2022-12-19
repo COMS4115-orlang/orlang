@@ -50,7 +50,11 @@
 topLevel:
 | letBinding topLevel         { NoHint(Let($1, $2)) }
 | typeAnn letBinding topLevel { let (v1, tp) = $1 in
-                                let Binding(LVar(v2), _, _) = $2 in
+                                let v2 = 
+                                    match $2 with
+                                    | Binding(LVar(v), _, _) -> v
+                                    | _ -> raise(Failure("topLevel parsing error"))
+                                in 
                                 if v1 = v2
                                 then Hint(Let($2, $3), tp)
                                 else raise(Failure("type annotation must be \
@@ -59,7 +63,11 @@ topLevel:
                               }
 | letBinding                  { NoHint(Let($1, Hint(Var "main", Concrete "Int"))) }
 | typeAnn letBinding          { let (v1, tp) = $1 in
-                                let Binding(LVar(v2), _, _) = $2 in
+                                let v2 = 
+                                    match $2 with
+                                    | Binding(LVar(v), _, _) -> v
+                                    | _ -> raise(Failure("topLevel parsing error"))
+                                in 
                                 if v1 = v2 
                                 then Hint(Let($2, Hint(Var "main", Concrete "Int")), tp)
                                 else raise(Failure("type annotation must be \
@@ -68,23 +76,42 @@ topLevel:
                               }
 
 letBinding:
-| LET REC binding             { let Binding(v, e, _) = $3 in Binding(v, e, true) }
-| LET REC binding WHERE wheres{ let Binding(v, e, _) = $3 in 
-                                let body = fold_right
-                                  (fun (Binding(w, f, _)) acc -> 
-                                      NoHint(Call(NoHint(Lambda(w, acc)), f)))  
-                                  $5
-                                  e in
-                                Binding(v, body, true)
+| LET REC binding             { let b =
+                                  match $3 with
+                                  | Binding(v, e, _) -> Binding(v, e, true)
+                                  | _                -> raise(Failure("cannot do tuple/list \
+                                                                       in recursive let binding"))
+                                in b 
+                              }
+| LET REC binding WHERE wheres{ let b = 
+                                  match $3 with
+                                  | Binding(v, e, _) -> 
+                                        let body = fold_right
+                                            (fun bd acc ->
+                                                match bd with
+                                                | Binding(w, f, _) -> NoHint(Call(NoHint(Lambda(w, acc)), f))
+                                                | _ -> raise(Failure("nope"))
+                                            )  
+                                            $5 e in
+                                            Binding(v, body, true)
+                                  | _ -> raise(Failure("cannot do tuple/list in recursive \
+                                                       let binding"))
+                                in b
                               }
 | LET binding                 { $2 }
-| LET binding WHERE wheres    { let Binding(v, e, _) = $2 in 
-                                let body = fold_right
-                                  (fun (Binding(w, f, _)) acc -> 
-                                      NoHint(Call(NoHint(Lambda(w, acc)), f)))  
-                                  $4
-                                  e in
-                                Binding(v, body, false)
+| LET binding WHERE wheres    { let b =
+                                  match $2 with
+                                  | Binding(v, e, _) -> 
+                                      let body = fold_right
+                                          (fun bd acc -> 
+                                              match bd with
+                                              | Binding(w, f, _) -> NoHint(Call(NoHint(Lambda(w, acc)), f))
+                                              | _ -> raise(Failure("nope"))
+                                          ) 
+                                          $4  e in
+                                      Binding(v, body, false)
+                                  | _ -> raise(Failure("cannot do tuple/list with let binding with where"))
+                                in b
                               }
 
 wheres:
@@ -93,10 +120,16 @@ wheres:
 
 binding:
 | VARIABLE EQUALS expr        { Binding(LVar($1), $3, false) }
-| VARIABLE binding            { let Binding(v, e, _) = $2
-                                in Binding(LVar($1), NoHint(Lambda(v, e)), false) }
-| LPAREN multVars RPAREN EQUALS expr   { MBinding($2, $5) }
-| LPAREN consVars RPAREN EQUALS expr   { CBinding($2, $5) }
+| VARIABLE binding            { let b = 
+                                  match $2 with
+                                  | Binding(v, e, _) -> Binding(LVar($1), NoHint(Lambda(v, e)), false)
+                                  | _                -> raise(Failure("nothing"))
+                                in b
+                              }
+| LPAREN VARIABLE COMMA multVars RPAREN EQUALS expr
+                              { MBinding((LVar($2))::($4), $7) }
+| LPAREN VARIABLE DCOLON consVars RPAREN EQUALS expr
+                              { CBinding(LVar(($2))::($4), $7) }
 
 
 typeAnn:
