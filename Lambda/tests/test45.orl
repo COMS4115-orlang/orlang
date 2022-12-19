@@ -1,0 +1,6 @@
+let fibList n = [0, 1, 2]
+
+let main =
+  let fl = fibList 10 in
+  let (x :: xs) = fl in x
+
