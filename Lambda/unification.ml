@@ -97,6 +97,10 @@ let rec unification (t1 : typ) (t2 : typ) : (typ * substitution) =
           raise (Failure("Cannot unify concrete type " ^ (toString t1) ^ " with list type " ^ (toString t2)))
   | (ListTyp _, Concrete _) ->
           raise (Failure("Cannot unify list type " ^ (toString t1) ^ " with concrete type " ^ (toString t2)))
+  | (ArrowTyp (_, _), ListTyp _) ->
+          raise (Failure("Cannot unify concrete type " ^ (toString t1) ^ " with list type " ^ (toString t2)))
+  | (ListTyp _, ArrowTyp (_, _)) ->
+          raise (Failure("Cannot unify list type " ^ (toString t1) ^ " with concrete type " ^ (toString t2)))
   | (ListTyp t, TypVar s) ->
           let sub = M.add s t1 M.empty in
           (t1, sub)   
