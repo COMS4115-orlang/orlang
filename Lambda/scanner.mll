@@ -10,6 +10,7 @@ rule tokenize = parse
 | "(*"  { comment 1 lexbuf }
 | '+'   { PLUS }
 | "+."  { FPLUS }
+| "++"  { LCAT }
 | '-'   { MINUS }
 | "-."  { FMINUS }
 | '*'   { TIMES }

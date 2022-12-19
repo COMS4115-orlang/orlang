@@ -75,7 +75,8 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
           | LT  -> (nextTypVar last, Concrete "Bool")
           | LTE -> (nextTypVar last, Concrete "Bool")
           | GT  -> (nextTypVar last, Concrete "Bool")
-          | GTE -> (nextTypVar last, Concrete "Bool")) in
+          | GTE -> (nextTypVar last, Concrete "Bool"))
+          | LCAT -> let ntv = nextTypVar last in (ListTyp ntv, ListTyp ntv) in
           let (returnT, subR) = unification returnT t in
           let typEnvNew = applyte subR typEnv in
 
