@@ -19,6 +19,7 @@ type codegenResult =
 let rec apply (sub : substitution) (tp : typ) : typ = 
   match tp with
   | Concrete _ -> tp
+  | Unit -> tp
   | TypVar str ->
           if M.mem str sub
           then M.find str sub
@@ -47,6 +48,7 @@ let compose (sub1 : substitution) (sub2 : substitution) : substitution =
 let rec occurs (str : string) (tp : typ) : bool = 
   match tp with
   | Concrete _     -> false
+  | Unit           -> false
   | TypVar t       -> (t = str)
   | ArrowTyp(a, b) -> (occurs str a) || (occurs str b)
   | ListTyp t      -> occurs str t
@@ -54,6 +56,7 @@ let rec occurs (str : string) (tp : typ) : bool =
   (* converts a type to a string for pretty print *)
 let rec toString : typ -> string = function
   | Concrete s     -> s
+  | Unit           -> "()"
   | TypVar s       -> s
   | ArrowTyp(a, b) -> "(" ^ (toString a) ^ ") -> (" ^ (toString b) ^ ")"
   | ListTyp t      -> "List " ^ (toString t)
@@ -67,6 +70,10 @@ let rec unification (t1 : typ) (t2 : typ) : (typ * substitution) =
   | (Concrete _, TypVar s2) ->
           (t1, M.add s2 t1 M.empty)
   | (TypVar s1, Concrete _) ->
+          (t2, M.add s1 t2 M.empty)
+  | (Unit, TypVar s2) ->
+          (t1, M.add s2 t1 M.empty)
+  | (TypVar s1, Unit) ->
           (t2, M.add s1 t2 M.empty)
   | (TypVar s1, TypVar s2) ->
           if s1 = s2 then (t1, M.empty)
@@ -93,13 +100,17 @@ let rec unification (t1 : typ) (t2 : typ) : (typ * substitution) =
           then raise (Failure("infinite type"))
           else (t1, M.add s2 t1 M.empty)
   | (Concrete _, ListTyp _) ->
-          raise (Failure("Cannot unify concrete type " ^ (toString t1) ^ " with list type " ^ (toString t2)))
+          raise (Failure("Cannot unify concrete type " ^ 
+                         (toString t1) ^ " with list type " ^ (toString t2)))
   | (ListTyp _, Concrete _) ->
-          raise (Failure("Cannot unify list type " ^ (toString t1) ^ " with concrete type " ^ (toString t2)))
+          raise (Failure("Cannot unify list type " ^ 
+                         (toString t1) ^ " with concrete type " ^ (toString t2)))
   | (ArrowTyp (_, _), ListTyp _) ->
-          raise (Failure("Cannot unify concrete type " ^ (toString t1) ^ " with list type " ^ (toString t2)))
+          raise (Failure("Cannot unify concrete type " ^ 
+                         (toString t1) ^ " with list type " ^ (toString t2)))
   | (ListTyp _, ArrowTyp (_, _)) ->
-          raise (Failure("Cannot unify list type " ^ (toString t1) ^ " with concrete type " ^ (toString t2)))
+          raise (Failure("Cannot unify list type " ^ 
+                         (toString t1) ^ " with concrete type " ^ (toString t2)))
   | (ListTyp t, TypVar s) ->
           let sub = M.add s t1 M.empty in
           (t1, sub)   
@@ -109,3 +120,16 @@ let rec unification (t1 : typ) (t2 : typ) : (typ * substitution) =
   | (ListTyp t1, ListTyp t2) ->
           let (ut, sub) = unification t1 t2 in
           (ListTyp ut, sub)
+  | (Unit, Unit) -> (t1, M.empty)
+  | (Unit, Concrete _) -> 
+          raise (Failure("Cannot unify unit type with concrete type " ^ (toString t2)))
+  | (Concrete _, Unit) -> 
+          raise (Failure("Cannot unify concrete type " ^ (toString t1) ^ " with unit type"))
+  | (Unit, ListTyp _) -> 
+          raise (Failure("Cannot unify unit type with list type " ^ (toString t2)))
+  | (ListTyp _, Unit) -> 
+          raise (Failure("Cannot unify list type " ^ (toString t1) ^ " with unit type"))
+  | (Unit, ArrowTyp(_,_)) -> 
+          raise (Failure("Cannot unify unit type with arrow type " ^ (toString t2)))
+  | (ArrowTyp(_,_), Unit) -> 
+          raise (Failure("Cannot unify arrow type " ^ (toString t1) ^ " with unit type"))

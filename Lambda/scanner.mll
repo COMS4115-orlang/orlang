@@ -17,6 +17,7 @@ rule tokenize = parse
 | '/'   { DIV }
 | "/."  { FDIV }
 | '%'   { MOD }
+| "()"  { UNIT }
 | '('   { LPAREN }
 | ')'   { RPAREN }
 | '['   { LBRACKET }
@@ -61,6 +62,7 @@ rule tokenize = parse
 | "true" { TRUE }
 | "false" { FALSE }
 | ['a'-'z'] ['a'-'z' 'A'-'Z' '0'-'9' '_' ]* as id { VARIABLE(id) }
+| "List" { LIST }
 | ['A'-'Z'] ['a'-'z' 'A'-'Z' '0'-'9']* as id { TYPE(id) }
 | '\''['a'-'z'] ['a'-'z' 'A'-'Z' '0'-'9']* as id { TYPEVAR(id) }
 | eof { EOF }

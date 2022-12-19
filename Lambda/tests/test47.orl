@@ -1,0 +1,9 @@
+val f : List () -> List () -> ()
+let f xs ys = ()
+
+val x : List ()
+let x = [()]
+
+let main = 
+  let y = f x x in
+  0

@@ -1,0 +1,7 @@
+val x : ()
+let x = ()
+
+let main = 
+  if x == () 
+  then 1
+  else 0

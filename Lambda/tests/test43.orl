@@ -4,5 +4,5 @@ let rec sum xss =
     | otherwise => let (x::xs) = xss in (x + (sum xs));
 
 let main = 
-    let lst = (1 : 2 : 3 : 4 : [5]) in
+    let lst = (1 :: 2 :: 3 :: 4 :: [5]) in
     sum lst

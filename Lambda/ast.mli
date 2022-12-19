@@ -5,17 +5,22 @@ type lvalue =
 
 type typ = 
     Concrete of string
+  | Unit
   | TypVar of string
   | ArrowTyp of typ * typ
   | ListTyp of typ
 
-type binop = ADD | SUB | MLT | DIV | MOD | AND | OR | EQ | LT | LTE | GT | GTE | FADD | FSUB | FMLT | FDIV
+type binop = ADD | SUB | MLT | DIV | MOD 
+           | AND | OR 
+           | EQ | LT | LTE | GT | GTE 
+           | FADD | FSUB | FMLT | FDIV
 type unop = NOT
 
 type expr =
     IntLit of int
   | BoolLit of int
   | FloatLit of float
+  | UnitLit
   | ListLit of hExpr list
   | Binop of binop * hExpr * hExpr
   | LCons of hExpr * hExpr
@@ -51,6 +56,7 @@ type sExpr = typ * sx
 and sx =
     SIntLit of int
   | SBoolLit of int
+  | SUnitLit
   | SFloatLit of float
   | SListLit of sExpr list
   | SBinop of binop * sExpr * sExpr

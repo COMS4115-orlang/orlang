@@ -182,6 +182,15 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
             sub   = sub;
           }
 (*---------------------------------------------------------------------------*)  
+  | NoHint(UnitLit)           ->
+          check (Hint(UnitLit, nextTypVar last)) typEnv
+  | Hint(UnitLit, t)          ->
+          let (tp, sub) = unification Unit t in
+          { tp    = tp;
+            sexpr = (tp, SUnitLit);
+            sub   = sub;
+          }          
+(*---------------------------------------------------------------------------*)  
   | NoHint(IntLit (i))           ->
           check (Hint(IntLit(i), nextTypVar last)) typEnv
   | Hint(IntLit (i), t)          ->
@@ -380,4 +389,3 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
           sexpr = (xtp, SPrintInt(xexp));
           sub = xsub;
         }
-   | _ -> raise(Failure("lol"))

@@ -777,6 +777,20 @@ and check (sexpr : sExpr)          (* expression to translate *)
             lvar  = local;
           }
 (*---------------------------------------------------------------------------*)  
+  | SUnitLit             ->
+          let var = "_" ^ (nextEntry lastTemp) in
+
+          (* create a new var that stores the NULL pointer *)
+          let local = L.build_alloca voidptr var builder in
+          let const = L.build_inttoptr (L.const_int i64_t 0) 
+                                       voidptr
+                                       "const" builder in
+          let _ = L.build_store const local builder in
+
+          { var   = var;
+            lvar  = local;
+          }
+(*---------------------------------------------------------------------------*)  
   | SIntLit (i)          ->
           let var = "_" ^ (nextEntry lastTemp) in
 
@@ -1121,4 +1135,3 @@ and check (sexpr : sExpr)          (* expression to translate *)
 
  | SPrintInt(e) -> raise(Failure("to be implemented"))
          (* e here should evaluate to an Int type *)
- | _ -> raise(Failure("lol"))

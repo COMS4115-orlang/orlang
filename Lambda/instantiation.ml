@@ -34,6 +34,7 @@ let instantiate (sch : scheme) : typ =
 (* returns a set of type variables appearing in a type *)
 let rec typVars : typ -> S.t = function
     Concrete _     -> S.empty
+  | Unit           -> S.empty
   | TypVar s       -> S.singleton s
   | ArrowTyp(a, b) -> S.union (typVars a) (typVars b)
   | ListTyp t      -> typVars t

@@ -1,15 +1,15 @@
 let rec lsum xss = 
   match |.xss.| with
   | 0 => 0
-  | otherwise => let (x::xs) = xss 
+  | otherwise => let (x :: xs) = xss 
                  in x + (lsum xs)
   ;
 
 let fibList n =
   let rec fibHelper n cnt acc =
     match (cnt == n) with
-    | false     => let (x::y::xs) = acc
-                   in fibHelper n (cnt + 1) ((x + y):acc)
+    | false     => let (x :: y :: xs) = acc
+                   in fibHelper n (cnt + 1) ((x + y) :: acc)
     | otherwise => acc
     ;
   in

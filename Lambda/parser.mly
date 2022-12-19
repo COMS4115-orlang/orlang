@@ -2,6 +2,7 @@
    open Ast 
    open List
    open Desugar
+   (*| LPAREN RPAREN               { NoHint(UnitLit) }*)
 %}
 
 %token MATCH WITH GUARD SEMICOLON 
@@ -19,6 +20,8 @@
 
 %token BAND BOR BNOT DOUBLEEQUALS LT LTE GT GTE
 
+%token UNIT LIST
+
 %token <int> LITERAL
 %token <float> FLITERAL
 %token <string> VARIABLE
@@ -35,6 +38,7 @@
 %left PLUS MINUS FPLUS FMINUS
 %left TIMES DIV MOD FTIMES FDIV
 %left PRINTINT
+%left LIST
 
 %start topLevel
 %type <Ast.hExpr> topLevel
@@ -138,6 +142,8 @@ typeAnn:
 
 monoType:
 | TYPE                        { Concrete($1) }
+| UNIT                        { Unit }
+| LIST monoType               { ListTyp($2) }
 | TYPEVAR                     { TypVar($1) }
 | LPAREN monoType RPAREN      { $2 }
 | monoType ARROW monoType     { ArrowTyp($1, $3) }
@@ -167,7 +173,7 @@ expr:
 | expr FDIV   expr            { NoHint(Binop(FDIV, $1, $3)) }
 | expr BAND  expr             { NoHint(Binop(AND, $1, $3)) }
 | expr BOR   expr             { NoHint(Binop(OR, $1, $3)) }
-| expr COLON expr             { NoHint(LCons($1, $3)) }
+| expr DCOLON expr            { NoHint(LCons($1, $3)) }
 | expr DOUBLEEQUALS   expr    { NoHint(Binop(EQ, $1, $3)) }
 | expr LT    expr             { NoHint(Binop(LT, $1, $3)) }
 | expr LTE   expr             { NoHint(Binop(LTE, $1, $3)) }
@@ -210,6 +216,7 @@ arg:
 | TRUE                        { NoHint(BoolLit(1)) }
 | FALSE                       { NoHint(BoolLit(0)) }
 | VARIABLE                    { NoHint(Var($1)) }
+| UNIT                        { NoHint(UnitLit) }
 | LPAREN expr RPAREN          { $2 }
 | LBRACKET lst RBRACKET       { NoHint(ListLit($2)) }
 | GUARDDOT expr DOTGUARD      { NoHint(LLen($2)) }
