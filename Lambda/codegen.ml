@@ -1291,3 +1291,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
             var   = var;
             lvar  = local;
           }
+
+ | SPrintInt(e) -> raise(Failure("to be implemented"))
+         (* e here should evaluate to an Int type *)
+ | _ -> raise(Failure("lol"))
