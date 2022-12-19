@@ -31,7 +31,13 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
           check (Hint(ListLit(lst), nextTypVar last)) typEnv 
   | Hint(ListLit(lst), t) ->
           if (List.length lst) = 0
-          then raise (Failure("Empty list not supported"))
+          then 
+            let tv = nextTypVar last in
+            let (ut, sub) = unification tv t in
+            { tp = ut;
+              sexpr = (ut, (SListLit []));
+              sub = sub;
+            }
           else
             let rec checkHomogeneous tpList =
                 (match tpList with
