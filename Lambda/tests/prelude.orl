@@ -1,4 +1,10 @@
 (*--- Conversions ---*)
+val abs: Int -> Int
+let abs x =
+  match (x < 0) with
+  | true      => 0 - x
+  | otherwise => x
+  ;
 
 val ord : Char -> Int
 let ord x = ord_internal x
@@ -21,7 +27,7 @@ let string_of_int x =
          let x = x / 10 in
          helper x ((chr (r + (ord '0'))) :: lst)
   in 
-  let str = helper x [] in
+  let str = helper (abs x) [] in
   if x < 0 
   then '-' :: str
   else str
@@ -104,7 +110,7 @@ let rec map f lst =
                  (f x) :: (map f xs)
   ;
 
-val foldl : ('foldla -> 'foldb -> 'foldla) -> 'foldla -> List 'foldb -> 'foldla
+val foldl : ('foldla -> 'foldlb -> 'foldla) -> 'foldla -> List 'foldlb -> 'foldla
 let rec foldl f acc lst = 
   match |.lst.| with
   | 0         => acc
