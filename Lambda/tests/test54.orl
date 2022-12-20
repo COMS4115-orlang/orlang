@@ -1,0 +1,6 @@
+let main = 
+  let xs = [10, 20, 30, 40, 50] in
+  let ys = [60, 70, 80, 90, 100] in
+  let xsys = extend xs ys in
+  let print = map print_int_endline xsys in
+  ()

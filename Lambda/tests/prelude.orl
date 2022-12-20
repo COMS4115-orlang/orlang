@@ -76,16 +76,13 @@ let reverse lst =
   reverse_helper lst []
 
 val map : ('mapa -> 'mapb) -> List 'mapa -> List 'mapb
-let map f lst =
-  let rec map_helper f lst acc = 
-    if |.lst.| == 0
-    then
-      acc
-    else
-      let (x :: xs) = lst in
-      map_helper f xs ((f x) :: acc)
-  in
-  map_helper f (reverse lst) []
+let rec map f lst =
+  if |.lst.| == 0
+  then
+    []
+  else
+    let (x :: xs) = lst in
+    (f x) :: (map f xs)
 
 val foldl : ('foldla -> 'foldb -> 'foldla) -> 'foldla -> List 'foldb -> 'foldla
 let rec foldl f acc lst = 
@@ -104,3 +101,7 @@ let rec foldr f acc lst =
   else
     let (x :: xs) = lst in
     f x (foldr f acc xs)
+
+val extend : List 'extenda -> List 'extenda -> List 'extenda
+let extend lsta lstb = 
+  foldr (\x lst -> (x :: lst)) lstb lsta
