@@ -55,15 +55,15 @@ let print_endline x =
 
 (*--- List Operations ---*)
 
-val head : List 'any -> 'any
+val head : List 'heada -> 'heada
 let head lst = 
   let (x :: xs) = lst in x
 
-val tail : List 'bny -> List 'bny
+val tail : List 'taila -> List 'taila
 let tail lst = 
   let (x :: xs) = lst in xs
 
-val reverse : List 'cny -> List 'cny
+val reverse : List 'reversea -> List 'reversa
 let reverse lst = 
   let rec reverse_helper lst acc = 
     if |.lst.| == 0
@@ -74,3 +74,33 @@ let reverse lst =
       reverse_helper xs (x :: acc)
   in
   reverse_helper lst []
+
+val map : ('mapa -> 'mapb) -> List 'mapa -> List 'mapb
+let map f lst =
+  let rec map_helper f lst acc = 
+    if |.lst.| == 0
+    then
+      acc
+    else
+      let (x :: xs) = lst in
+      map_helper f xs ((f x) :: acc)
+  in
+  map_helper f (reverse lst) []
+
+val foldl : ('foldla -> 'foldb -> 'foldla) -> 'foldla -> List 'foldb -> 'foldla
+let rec foldl f acc lst = 
+  if |.lst.| == 0
+  then
+    acc
+  else
+    let (x :: xs) = lst in
+    foldl f (f acc x) xs
+
+val foldr : ('foldrb -> 'foldra -> 'foldra) -> 'foldra -> List 'foldrb -> 'foldra
+let rec foldr f acc lst =
+  if |.lst.| == 0
+  then
+    acc
+  else
+    let (x :: xs) = lst in
+    f x (foldr f acc xs)

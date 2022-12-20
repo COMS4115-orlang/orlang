@@ -12,6 +12,8 @@ let the_module = L.create_module context "Orlang"
 let i8_t       = L.i8_type context
 let i32_t      = L.i32_type context
 let i64_t      = L.i64_type context
+let float_t    = L.float_type context
+let double_t   = L.double_type context
 let voidptr    = L.pointer_type i8_t
 let voidptrptr = L.pointer_type voidptr
 
@@ -784,23 +786,24 @@ and fix (name : string) arg lambdaName typEnv body =
                     (* assign the argument to the member of the struct *)
                     ignore(llvmAssignMember allocd_struct p currIndex builder);
                 ) captureParam) in
-
+    (*
     (* NULL assignment *)
     let argIndex = 1 + find arg capture in
     let nullvar = L.build_alloca voidptr "_nullvar" builder in
     let _ = L.build_store (L.const_null voidptr) nullvar builder in
     let _ = llvmAssignMember allocd_struct nullvar argIndex builder in
-
+    *)
     (* insert body of the call function *)
     let (e, te) = body in
     let { var  = evar; 
           lvar = elvar; } = check e te allocd_struct builder in
 
     (* make the struct self-referential *)
-    let _ = llvmAssignMember elvar elvar
-                             (if not (M.mem lambdaName te)
-                              then 1 + argIndex
-                              else argIndex) builder in
+    let big_capture = (M.fold (fun k _ acc -> k :: acc) 
+                      (M.add lambdaName dummyScheme (M.add arg dummyScheme typEnv))
+                       []) in
+    let big_argIndex = 1 + (find arg big_capture) in
+    let _ = llvmAssignMember elvar elvar big_argIndex builder in
 
     (* call apply function *)
     let apply = applyFunc in
@@ -900,6 +903,20 @@ and check (sexpr : sExpr)          (* expression to translate *)
           { var   = var;
             lvar  = local;
           }
+(*---------------------------------------------------------------------------*)  
+  | SFloatLit (f)         ->
+         let var = "_" ^ (nextEntry lastTemp) in
+
+         (* create a new var that stores the float casted to void* *)
+         let local = L.build_alloca voidptr var builder in
+         let const = L.build_bitcast (L.const_float double_t f)
+                                      voidptr
+                                      "const" builder in
+         let _ = L.build_store const local builder in
+
+         { var   = var;
+           lvar  = local;
+         }
 (*---------------------------------------------------------------------------*)  
   | SListLit (lst)         ->
           let var = "_" ^ (nextEntry lastTemp) in

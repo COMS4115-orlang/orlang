@@ -1,0 +1,5 @@
+let main = 
+  let lst = [1, 2, 3, 4, 5] in
+  let sum x y = x + y in
+  let tmp = foldl sum 0 lst in
+  print_int_endline tmp

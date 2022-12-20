@@ -1,0 +1,6 @@
+let main =
+  let lst = [100, 200, 300] in
+  let f x = x + 1 in
+  let incremented_lst = (map f lst) in
+  let (x :: y :: z :: xs) = incremented_lst in
+  print_int_endline (x + y + z)
