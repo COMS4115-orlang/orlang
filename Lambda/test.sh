@@ -7,7 +7,7 @@ do
     ./orlang.native  tests/test"$i".orl  tests/test"$i".ll 2> tests/test"$i".out
 
     if [ $? -eq 0 ]; then
-        clang tests/test"$i".ll -Wno-override-module
+        clang tests/test"$i".ll -Wno-override-module -lm
         ./a.out > tests/test"$i".out
     fi
 

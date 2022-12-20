@@ -1296,5 +1296,10 @@ and check (sexpr : sExpr)          (* expression to translate *)
  | SChr(e) -> 
     (* construct the List Char *)
     check e typEnv llvmEnv builder
- | SSItoFP(e) -> check e typEnv llvmEnv builder
- | SFPtoSI(e) -> check e typEnv llvmEnv builder
+ | SSItoFP(e) -> 
+    let { var   = var;
+          lvar  = local; } = check e typEnv llvmEnv builder int
+          (convert var to floating point)
+ | SFPtoSI(e) ->
+    let { var   = var;
+          lvar  = local; } = check e typEnv llvmEnv builder
