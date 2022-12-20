@@ -1289,7 +1289,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
     { var  = var;
       lvar = local;
     }
-(*---------------------------------------------------------------------------*)    
+(*---------------------------------------------------------------------------*)
  | SOrd(e) -> 
     (* construct the List Char *)
     check e typEnv llvmEnv builder
