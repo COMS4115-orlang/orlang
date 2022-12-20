@@ -1,0 +1,5 @@
+let main = 
+  let lst = [1, 0, 3, 7, 4, 8, 5, 9, 2, 6] in
+  let sortedlst = sort lst in
+  let print = map print_int_endline sortedlst in
+  ()

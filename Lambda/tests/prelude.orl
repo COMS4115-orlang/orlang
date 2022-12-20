@@ -118,3 +118,21 @@ let rec filter p lst =
       (x :: (filter p xs))
     else
       (filter p xs)
+
+val sortby : ('sortbya -> 'sortbya -> Bool) -> List 'sortbya -> List 'sortbya
+let rec sortby cmp lst =
+  if |.lst.| == 0
+  then
+    []
+  else
+    let (x :: xs) = lst in
+    let lt a = cmp a x in
+    let nlt a = cmp x a in
+    extend (sortby cmp (filter lt xs)) (extend [x] (sortby cmp (filter (nlt) xs)))
+
+val sort : List 'sorta -> List 'sorta
+let sort lst = sortby (\x y -> x < y) lst
+
+val concatenate : List List 'concatenatea -> List 'concatenate
+let concatenate lst =
+  foldr extend [] lst
