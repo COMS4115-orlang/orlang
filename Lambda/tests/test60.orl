@@ -1,6 +1,6 @@
 let main = 
   let y = (5. *. 3.) in
-  print_int_endline (fptosi y) 
+  string_of_bool (y < 1003.1003) 
 
 
 

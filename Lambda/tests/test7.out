@@ -1,1 +1,0 @@
-Fatal error: exception Failure("Cannot unify arrow type (Int) -> (Int) with unit type")
