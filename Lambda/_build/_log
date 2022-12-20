@@ -1,0 +1,66 @@
+### Starting build.
+# Target: orlang.ml.depends, tags: { extension:ml, file:orlang.ml, ocaml, ocamldep, quiet }
+/home/scott/.opam/default/bin/ocamldep.opt -modules orlang.ml > orlang.ml.depends # cached
+# Target: ast.mli.depends, tags: { extension:mli, file:ast.mli, ocaml, ocamldep, quiet }
+/home/scott/.opam/default/bin/ocamldep.opt -modules ast.mli > ast.mli.depends # cached
+# Target: ast.cmi, tags: { byte, compile, extension:mli, file:ast.mli, interf, ocaml, quiet }
+/home/scott/.opam/default/bin/ocamlc.opt -c -I /home/scott/.opam/default/lib/llvm -o ast.cmi ast.mli # cached
+# Target: codegen.ml.depends, tags: { extension:ml, file:codegen.ml, ocaml, ocamldep, quiet }
+/home/scott/.opam/default/bin/ocamldep.opt -modules codegen.ml > codegen.ml.depends # cached
+# Target: instantiation.mli.depends, tags: { extension:mli, file:instantiation.mli, ocaml, ocamldep, quiet }
+/home/scott/.opam/default/bin/ocamldep.opt -modules instantiation.mli > instantiation.mli.depends # cached
+# Target: unification.mli.depends, tags: { extension:mli, file:unification.mli, ocaml, ocamldep, quiet }
+/home/scott/.opam/default/bin/ocamldep.opt -modules unification.mli > unification.mli.depends # cached
+# Target: unification.cmi, tags: { byte, compile, extension:mli, file:unification.mli, interf, ocaml, quiet }
+/home/scott/.opam/default/bin/ocamlc.opt -c -I /home/scott/.opam/default/lib/llvm -o unification.cmi unification.mli # cached
+# Target: instantiation.cmi, tags: { byte, compile, extension:mli, file:instantiation.mli, interf, ocaml, quiet }
+/home/scott/.opam/default/bin/ocamlc.opt -c -I /home/scott/.opam/default/lib/llvm -o instantiation.cmi instantiation.mli # cached
+# Target: codegen.cmo, tags: { byte, compile, extension:cmo, extension:ml, file:codegen.cmo, file:codegen.ml, implem, ocaml, quiet }
+/home/scott/.opam/default/bin/ocamlc.opt -c -I /home/scott/.opam/default/lib/llvm -o codegen.cmo codegen.ml # cached
+# Target: parser.mly, tags: { extension:mly, file:parser.mly, infer, ocaml, ocamlyacc, parser, quiet }
+/home/scott/.opam/default/bin/ocamlyacc -v parser.mly # cached
+# Target: parser.mli.depends, tags: { extension:mli, file:parser.mli, ocaml, ocamldep, quiet }
+/home/scott/.opam/default/bin/ocamldep.opt -modules parser.mli > parser.mli.depends # cached
+# Target: parser.cmi, tags: { byte, compile, extension:mli, file:parser.mli, interf, ocaml, quiet }
+/home/scott/.opam/default/bin/ocamlc.opt -c -I /home/scott/.opam/default/lib/llvm -o parser.cmi parser.mli # cached
+# Target: scanner.mll, tags: { extension:mll, file:scanner.mll, lexer, ocaml, ocamllex, quiet }
+/home/scott/.opam/default/bin/ocamllex.opt -q scanner.mll # cached
+# Target: scanner.ml.depends, tags: { extension:ml, file:scanner.ml, ocaml, ocamldep, quiet }
+/home/scott/.opam/default/bin/ocamldep.opt -modules scanner.ml > scanner.ml.depends # cached
+# Target: scanner.cmo, tags: { byte, compile, extension:cmo, extension:ml, file:scanner.cmo, file:scanner.ml, implem, ocaml, quiet }
+/home/scott/.opam/default/bin/ocamlc.opt -c -I /home/scott/.opam/default/lib/llvm -o scanner.cmo scanner.ml # cached
+# Target: semant.ml.depends, tags: { extension:ml, file:semant.ml, ocaml, ocamldep, quiet }
+/home/scott/.opam/default/bin/ocamldep.opt -modules semant.ml > semant.ml.depends # cached
+# Target: semant.cmo, tags: { byte, compile, extension:cmo, extension:ml, file:semant.cmo, file:semant.ml, implem, ocaml, quiet }
+/home/scott/.opam/default/bin/ocamlc.opt -c -I /home/scott/.opam/default/lib/llvm -o semant.cmo semant.ml # cached
+# Target: orlang.cmo, tags: { byte, compile, extension:cmo, extension:ml, file:orlang.cmo, file:orlang.ml, implem, ocaml, quiet }
+/home/scott/.opam/default/bin/ocamlc.opt -c -I /home/scott/.opam/default/lib/llvm -o orlang.cmo orlang.ml # cached
+# Target: instantiation.ml.depends, tags: { extension:ml, file:instantiation.ml, ocaml, ocamldep, quiet }
+/home/scott/.opam/default/bin/ocamldep.opt -modules instantiation.ml > instantiation.ml.depends # cached
+# Target: unification.ml.depends, tags: { extension:ml, file:unification.ml, ocaml, ocamldep, quiet }
+/home/scott/.opam/default/bin/ocamldep.opt -modules unification.ml > unification.ml.depends # cached
+# Target: unification.cmx, tags: { compile, extension:cmx, extension:ml, file:unification.cmx, file:unification.ml, implem, native, ocaml, quiet }
+/home/scott/.opam/default/bin/ocamlopt.opt -c -I /home/scott/.opam/default/lib/llvm -o unification.cmx unification.ml # cached
+# Target: instantiation.cmx, tags: { compile, extension:cmx, extension:ml, file:instantiation.cmx, file:instantiation.ml, implem, native, ocaml, quiet }
+/home/scott/.opam/default/bin/ocamlopt.opt -c -I /home/scott/.opam/default/lib/llvm -o instantiation.cmx instantiation.ml # cached
+# Target: codegen.cmx, tags: { compile, extension:cmx, extension:ml, file:codegen.cmx, file:codegen.ml, implem, native, ocaml, quiet }
+/home/scott/.opam/default/bin/ocamlopt.opt -c -I /home/scott/.opam/default/lib/llvm -o codegen.cmx codegen.ml # cached
+# Target: parser.ml.depends, tags: { extension:ml, file:parser.ml, ocaml, ocamldep, quiet }
+/home/scott/.opam/default/bin/ocamldep.opt -modules parser.ml > parser.ml.depends # cached
+# Target: desugar.ml.depends, tags: { extension:ml, file:desugar.ml, ocaml, ocamldep, quiet }
+/home/scott/.opam/default/bin/ocamldep.opt -modules desugar.ml > desugar.ml.depends # cached
+# Target: desugar.cmo, tags: { byte, compile, extension:cmo, extension:ml, file:desugar.cmo, file:desugar.ml, implem, ocaml, quiet }
+/home/scott/.opam/default/bin/ocamlc.opt -c -I /home/scott/.opam/default/lib/llvm -o desugar.cmo desugar.ml # cached
+# Target: desugar.cmx, tags: { compile, extension:cmx, extension:ml, file:desugar.cmx, file:desugar.ml, implem, native, ocaml, quiet }
+/home/scott/.opam/default/bin/ocamlopt.opt -c -I /home/scott/.opam/default/lib/llvm -o desugar.cmx desugar.ml # cached
+# Target: parser.cmx, tags: { compile, extension:cmx, extension:ml, file:parser.cmx, file:parser.ml, implem, native, ocaml, quiet }
+/home/scott/.opam/default/bin/ocamlopt.opt -c -I /home/scott/.opam/default/lib/llvm -o parser.cmx parser.ml # cached
+# Target: scanner.cmx, tags: { compile, extension:cmx, extension:ml, file:scanner.cmx, file:scanner.ml, implem, native, ocaml, quiet }
+/home/scott/.opam/default/bin/ocamlopt.opt -c -I /home/scott/.opam/default/lib/llvm -o scanner.cmx scanner.ml # cached
+# Target: semant.cmx, tags: { compile, extension:cmx, extension:ml, file:semant.cmx, file:semant.ml, implem, native, ocaml, quiet }
+/home/scott/.opam/default/bin/ocamlopt.opt -c -I /home/scott/.opam/default/lib/llvm -o semant.cmx semant.ml # cached
+# Target: orlang.cmx, tags: { compile, extension:cmx, extension:ml, file:orlang.cmx, file:orlang.ml, implem, native, ocaml, quiet }
+/home/scott/.opam/default/bin/ocamlopt.opt -c -I /home/scott/.opam/default/lib/llvm -o orlang.cmx orlang.ml # cached
+# Target: orlang.native, tags: { dont_link_with, extension:native, file:orlang.native, link, native, ocaml, program, quiet }
+/home/scott/.opam/default/bin/ocamlopt.opt -I /home/scott/.opam/default/lib/llvm /home/scott/.opam/default/lib/llvm/shared/llvm.cmxa unification.cmx instantiation.cmx codegen.cmx desugar.cmx parser.cmx scanner.cmx semant.cmx orlang.cmx -o orlang.native # cached
+# Compilation successful.
