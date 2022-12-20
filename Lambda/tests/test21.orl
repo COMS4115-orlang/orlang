@@ -1,3 +1,4 @@
 let main =
     let lst = [] in
-    lst
+    let print = print_int_endline |.lst.| in
+    ()

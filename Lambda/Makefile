@@ -3,64 +3,7 @@ build:
 
 .PHONY : all_tests
 all_tests: build
-	-./test.sh 1
-	-./test.sh 2
-	-./test.sh 3
-	-./test.sh 4
-	-./test.sh 5
-	-./test.sh 6
-	-./test.sh 7
-	-./test.sh 8
-	-./test.sh 9
-	-./test.sh 10
-	-./test.sh 11
-	-./test.sh 12
-	-./test.sh 13
-	-./test.sh 14
-	-./test.sh 15
-	-./test.sh 16
-	-./test.sh 17
-	-./test.sh 18
-	-./test.sh 19
-	-./test.sh 20
-	-./test.sh 21
-	-./test.sh 22
-	-./test.sh 23
-	-./test.sh 24
-	-./test.sh 25
-	-./test.sh 26
-	-./test.sh 27
-	-./test.sh 28
-	-./test.sh 29
-	-./test.sh 30
-	-./test.sh 31
-	-./test.sh 32
-	-./test.sh 33
-	-./test.sh 34
-	-./test.sh 35
-	-./test.sh 36
-	-./test.sh 37
-	-./test.sh 38
-	-./test.sh 39
-	-./test.sh 40
-	-./test.sh 41
-	-./test.sh 42
-	-./test.sh 43
-	-./test.sh 44
-	-./test.sh 45
-	-./test.sh 46
-	-./test.sh 47
-	-./test.sh 48
-	-./test.sh 49
-	-./test.sh 50
-	-./test.sh 51
-	-./test.sh 52
-	-./test.sh 53
-	-./test.sh 54
-	-./test.sh 55
-	-./test.sh 56
-	-./test.sh 57
-	-./test.sh 58
+	-./test.sh
 	
 .PHONY : test
 test:

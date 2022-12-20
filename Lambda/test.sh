@@ -1,17 +1,34 @@
 #!/bin/bash
 
-./orlang.native  tests/test"$1".orl  tests/test"$1".ll 2> tests/test"$1".out
+for i in {1..58}
+do
+    echo "running test$i"
 
-if [ $? -eq 0 ]; then
-    clang tests/test"$1".ll -Wno-override-module
-    ./a.out > tests/test"$1".out
-    DIFF=$(diff tests/test"$1".out tests/test"$1".baseline) 
-else
-    DIFF=$(diff tests/test"$1".out tests/test"$1".baseline) 
-fi
+    ./orlang.native  tests/test"$i".orl  tests/test"$i".ll 2> tests/test"$i".out
 
-if [ "$DIFF" != "" ] 
-then
-    echo "test$1 (llvm translation) failed"
-    echo $DIFF
-fi
+    if [ $? -eq 0 ]; then
+        clang tests/test"$i".ll -Wno-override-module
+        ./a.out > tests/test"$i".out
+    fi
+
+    if [ $i -eq 6 ]; then
+        tmp_sout=$(mktemp /tmp/sout)
+        tmp_base=$(mktemp /tmp/base)
+        cut -c 1-89 tests/test6.out > $tmp_sout
+        cut -c 1-89 tests/test6.baseline > $tmp_base
+
+        DIFF=$(diff $tmp_sout $tmp_base) 
+
+        rm "$tmp_sout"
+        rm "$tmp_base"
+    else
+        DIFF=$(diff tests/test"$i".out tests/test"$i".baseline) 
+    fi
+
+
+    if [ "$DIFF" != "" ] 
+    then
+        echo "test$i (llvm translation) failed"
+        echo $DIFF
+    fi
+done

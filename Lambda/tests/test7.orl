@@ -1,3 +1,3 @@
-(* unification error: main must be of type int *)
+(* unification error: main must be of type unit *)
 
 let main = (\x -> x + 1)
