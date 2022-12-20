@@ -1,6 +1,6 @@
 # Orlang
 
-Update: 11/21/2022 (Mid-term project Hello-World Submission)
+Update: 12/20/2022 (Final Project Submission)
 
 ## 1. File Structure
 - `ast.mli`: Orlang's AST and SAST definitions
