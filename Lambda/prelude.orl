@@ -1,0 +1,159 @@
+(*--- Conversions ---*)
+val abs: Int -> Int
+let abs x =
+  match (x < 0) with
+  | true      => 0 - x
+  | otherwise => x
+  ;
+
+val ord : Char -> Int
+let ord x = ord_internal x
+
+val chr : Int -> Char
+let chr x = chr_internal x
+
+val sitofp : Int -> Float
+let sitofp x = sitofp_internal x
+
+val fptosi : Float -> Int
+let fptosi x = fptosi_internal x
+
+val string_of_int : Int -> List Char
+let string_of_int x =
+  let rec helper x lst =
+    if x <= 9
+    then chr(x + (ord '0')) :: lst
+    else let r = x % 10 in
+         let x = x / 10 in
+         helper x ((chr (r + (ord '0'))) :: lst)
+  in 
+  let str = helper (abs x) [] in
+  if x < 0 
+  then '-' :: str
+  else str
+
+val string_of_bool : Bool -> List Char
+let string_of_bool x = 
+  if x == true
+  then ['t', 'r', 'u', 'e']
+  else ['f', 'a', 'l', 's', 'e']
+
+val string_of_char : Char -> List Char
+let string_of_char x = x :: []
+
+val int_of_bool : Bool -> Int
+let int_of_bool x =
+  if x == true
+  then 1
+  else 0
+
+(*--- Printing ---*)
+
+val print : List Char -> ()
+let print x = print_internal x
+
+val print_int : Int -> ()
+let print_int x = print (string_of_int x)
+
+val print_int_endline : Int -> ()
+let print_int_endline x = 
+  let useless = print_int x in
+  print ('\n' :: [])
+
+val print_endline : List Char -> ()
+let print_endline x = 
+  let useless = print x in
+  print ('\n' :: [])
+
+(*--- List Operations ---*)
+
+val head : List 'heada -> 'heada
+let head lst = 
+  let (x :: xs) = lst in x
+
+val tail : List 'taila -> List 'taila
+let tail lst = 
+  let (x :: xs) = lst in xs
+
+val reverse : List 'reversea -> List 'reversa
+let reverse lst = 
+  let rec reverse_helper lst acc = 
+    if |.lst.| == 0
+    then
+      acc
+    else 
+      let (x :: xs) = lst in
+      reverse_helper xs (x :: acc)
+  in
+  reverse_helper lst []
+
+val map : ('mapa -> 'mapb) -> List 'mapa -> List 'mapb
+let rec map f lst =
+  match |.lst.| with
+  | 0         => []
+  | otherwise => let (x :: xs) = lst in
+                 (f x) :: (map f xs)
+  ;
+
+val foldl : ('foldla -> 'foldlb -> 'foldla) -> 'foldla -> List 'foldlb -> 'foldla
+let rec foldl f acc lst = 
+  match |.lst.| with
+  | 0         => acc
+  | otherwise => let (x :: xs) = lst in
+                 foldl f (f acc x) xs
+  ;
+
+val foldr : ('foldrb -> 'foldra -> 'foldra) -> 'foldra -> List 'foldrb -> 'foldra
+let rec foldr f acc lst =
+  match |.lst.| with
+  | 0         => acc
+  | otherwise => let (x :: xs) = lst in
+                 f x (foldr f acc xs)
+  ;
+
+val extend : List 'extenda -> List 'extenda -> List 'extenda
+let extend lsta lstb = 
+  foldr (\x lst -> (x :: lst)) lstb lsta
+
+val filter : ('filtera -> Bool) -> List 'filtera -> List 'filtera
+let rec filter p lst =
+  match |.lst.| with
+  | 0         => []
+  | otherwise => let (x :: xs) = lst in
+                 if (p x)
+                 then (x :: (filter p xs))
+                 else (filter p xs)
+  ;
+
+val sort_by : ('sortbya -> 'sortbya -> Bool) -> List 'sortbya -> List 'sortbya
+let rec sort_by cmp lst =
+  match |.lst.| with
+  | 0         => []
+  | otherwise => let (x :: xs) = lst in
+                 let lt a = cmp a x in
+                 let nlt a = cmp x a in
+                 extend (sort_by cmp (filter lt xs)) (extend [x] (sort_by cmp (filter (nlt) xs)))
+  ;
+
+val sort : List 'sorta -> List 'sorta
+let sort lst = sort_by (\x y -> x < y) lst
+
+val concatenate : List List 'concatenatea -> List 'concatenate
+let concatenate lst =
+  foldr extend [] lst
+
+val string_of_float: Float -> List Char
+let string_of_float x = 
+  let rec helper x =
+    if x %. 1. == 0.
+    then x
+    else helper (x *. 10.)
+  in
+  let intpart = string_of_int (fptosi x) in
+  let decpart = extend ['.'] (string_of_int (fptosi (helper (x %. 1.)))) in
+  let str = extend intpart decpart in
+
+  if x < 0.
+  then '-' :: str
+  else str
+
