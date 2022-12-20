@@ -5,6 +5,11 @@ build:
 all_tests: build
 	-./test.sh
 
+.PHONY : demo
+demo: build
+	-./demo.sh 1
+	-./demo.sh 2
+
 ##############################
 
 .PHONY : clean
