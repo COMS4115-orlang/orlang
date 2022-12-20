@@ -106,7 +106,7 @@ let extend lsta lstb =
 val filter : ('filtera -> Bool) -> List 'filtera -> List 'filtera
 let rec filter p lst =
   match |.lst.| with
-  | 0 => []
+  | 0         => []
   | otherwise => let (x :: xs) = lst in
                  if (p x)
                  then (x :: (filter p xs))
@@ -116,7 +116,7 @@ let rec filter p lst =
 val sortby : ('sortbya -> 'sortbya -> Bool) -> List 'sortbya -> List 'sortbya
 let rec sortby cmp lst =
   match |.lst.| with
-  | 0 => []
+  | 0         => []
   | otherwise => let (x :: xs) = lst in
                  let lt a = cmp a x in
                  let nlt a = cmp x a in
