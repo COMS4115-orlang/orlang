@@ -1,0 +1,5 @@
+let main = 
+  let x = 0.29 in
+  let y = 0.299 in
+  let c = (y > x) in
+  print_int_endline (int_of_bool c)
