@@ -923,20 +923,6 @@ and check (sexpr : sExpr)          (* expression to translate *)
             lvar  = local;
           }
 (*---------------------------------------------------------------------------*)  
-  | SFloatLit (f)         ->
-         let var = "_" ^ (nextEntry lastTemp) in
-
-         (* create a new var that stores the float casted to void* *)
-         let local = L.build_alloca voidptr var builder in
-         let const = L.build_bitcast (L.const_float float_t f)
-                                      voidptr
-                                      "const" builder in
-         let _ = L.build_store const local builder in
-
-         { var   = var;
-           lvar  = local;
-         }
-(*---------------------------------------------------------------------------*)  
   | SListLit (lst)         ->
           let var = "_" ^ (nextEntry lastTemp) in
           let elems = List.map (fun e -> let { var = var;
