@@ -105,3 +105,16 @@ let rec foldr f acc lst =
 val extend : List 'extenda -> List 'extenda -> List 'extenda
 let extend lsta lstb = 
   foldr (\x lst -> (x :: lst)) lstb lsta
+
+val filter : ('filtera -> Bool) -> List 'filtera -> List 'filtera
+let rec filter p lst =
+  if |.lst.| == 0
+  then
+    []
+  else
+    let (x :: xs) = lst in
+    if (p x)
+    then
+      (x :: (filter p xs))
+    else
+      (filter p xs)
