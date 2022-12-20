@@ -1,5 +1,5 @@
 let main = 
   let lst = [3, 7, 5, 9, 1, 2, 6, 4, 8, 0] in
-  let sortedlst = sortby (\x y -> x < y) lst in
+  let sortedlst = sort_by (\x y -> x < y) lst in
   let print = map print_int_endline sortedlst in
   ()
