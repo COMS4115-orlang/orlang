@@ -61,10 +61,10 @@ rule tokenize = parse
 | ";"   { SEMICOLON }
 | "otherwise"   { OTHERWISE }
 | sign? digit+ as lit { LITERAL(int_of_string lit) }
-| sign? (digit* dec digit+ expon?) as lit  { FLITERAL(float_of_string(lit)) }
-| sign? (digit* dec? digit+ expon) as lit  { FLITERAL(float_of_string(lit)) }
-| sign? (digit+ dec digit* expon?) as lit  { FLITERAL(float_of_string(lit)) }
-| sign? (digit+ dec? digit* expon) as lit  { FLITERAL(float_of_string(lit)) }
+| sign? (digit* dec digit+ expon?) as lit  { FLITERAL(float_of_string lit) }
+| sign? (digit* dec? digit+ expon) as lit  { FLITERAL(float_of_string lit) }
+| sign? (digit+ dec digit* expon?) as lit  { FLITERAL(float_of_string lit) }
+| sign? (digit+ dec? digit* expon) as lit  { FLITERAL(float_of_string lit) }
 | "'\\n'" { CLITERAL (code '\n') }
 | "'\\r'" { CLITERAL (code '\r') }
 | "'\\t'" { CLITERAL (code '\t') }

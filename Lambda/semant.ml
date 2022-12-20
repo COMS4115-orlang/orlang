@@ -397,7 +397,7 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
           sub = sub;
         }
 (*---------------------------------------------------------------------------*)  
-   | Hint(Chr(expr), t) ->
+   | Hint(Chr(expr), t) -> 
         let (tpRet, sub1) = unification (Concrete "Char") t in
         let typEnvNew = applyte sub1 typEnv in
         let { tp = xtp;
@@ -409,9 +409,9 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
         { tp = tpRet;
           sexpr = (tpRet, SChr(xexp));
           sub = sub;
-        }
+        } 
 (*---------------------------------------------------------------------------*)  
-    | Hint(SItoFP(expr), t) ->
+    | Hint(SItoFP(expr), t) ->       
       let (tpRet, sub1) = unification (Concrete "Float") t in
       let typEnvNew = applyte sub1 typEnv in
       let { tp = xtp;
@@ -421,11 +421,11 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
       let sub = compose sub1 sub2 in
 
       { tp = tpRet;
-        sexpr = (tpRet, SChr(xexp));
+        sexpr = (tpRet, SSItoFP(xexp));
         sub = sub;
       }
 (*---------------------------------------------------------------------------*)  
-    | Hint(FPtoSI(expr), t) ->
+    | Hint(FPtoSI(expr), t) -> 
       let (tpRet, sub1) = unification (Concrete "Int") t in
       let typEnvNew = applyte sub1 typEnv in
       let { tp = xtp;
@@ -435,6 +435,6 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
       let sub = compose sub1 sub2 in
 
       { tp = tpRet;
-        sexpr = (tpRet, SChr(xexp));
+        sexpr = (tpRet, SFPtoSI(xexp));
         sub = sub;
       }

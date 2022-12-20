@@ -1296,10 +1296,48 @@ and check (sexpr : sExpr)          (* expression to translate *)
  | SChr(e) -> 
     (* construct the List Char *)
     check e typEnv llvmEnv builder
- | SSItoFP(e) -> 
-    let { var   = var;
-          lvar  = local; } = check e typEnv llvmEnv builder int
-          (convert var to floating point)
- | SFPtoSI(e) ->
-    let { var   = var;
-          lvar  = local; } = check e typEnv llvmEnv builder
+ | SSItoFP(e) -> (let { var  = evar;
+                       lvar = elvar; } = check e typEnv llvmEnv builder in
+                  let var = "_" ^ (nextEntry lastTemp) in
+                  (* elvar is an llvalue we can think of as int *)
+                  let elvar_int = L.build_ptrtoint elvar i64_t
+                                                   "const" builder in
+                  L.dump_value(elvar_int);
+                  let elvar_float = L.build_sitofp elvar_int float_t
+                                                   "const" builder in
+                  (* cast double to int *)
+                  let const_intr = L.build_bitcast elvar_float
+                                                  i64_t
+                                                  "const" builder in
+                  
+                  (* create a new var that stores this int casted to void * *)
+                  let local = L.build_alloca voidptr var builder in
+                  let const = L.build_inttoptr elvar_int
+                                               voidptr
+                                               "const" builder in
+                  let _ = L.build_store const local builder in
+
+                  { var = var;
+                    lvar = local;
+                  }
+                 )
+ | SFPtoSI(e) -> (let { var  = evar;
+                       lvar = elvar; } = check e typEnv llvmEnv builder in
+                  let var = "_" ^ (nextEntry lastTemp) in
+                  (* elvar is an llvalue we can think of as double *)
+                  let elvar_int = L.build_ptrtoint elvar i64_t
+                                                   "const" builder in
+                  let elvar_float = L.build_bitcast elvar_int float_t
+                                                 "const" builder in
+                  let elvar_int_fin = L.build_fptosi elvar_float i64_t
+                                                 "const" builder in
+
+                  let local = L.build_alloca voidptr var builder in
+                  let const = L.build_inttoptr elvar_int_fin voidptr
+                                               "const" builder in
+                  let _ = L.build_store const local builder in
+
+                  { var = var;
+                    lvar = local;
+                  }
+                 )
