@@ -1313,7 +1313,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
                   
                   (* create a new var that stores this int casted to void * *)
                   let local = L.build_alloca voidptr var builder in
-                  let const = L.build_inttoptr elvar_int
+                  let const = L.build_inttoptr const_intr
                                                voidptr
                                                "const" builder in
                   print_endline (L.string_of_llvalue local);
@@ -1336,7 +1336,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
                                                  "const" builder in
 
                   let local = L.build_alloca voidptr var builder in
-                  let const = L.build_inttoptr elvar_int voidptr
+                  let const = L.build_inttoptr elvar_int_fin voidptr
                                                "const" builder in
                   let _ = L.build_store const local builder in
 
