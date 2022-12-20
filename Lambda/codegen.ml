@@ -12,6 +12,7 @@ let the_module = L.create_module context "Orlang"
 let i8_t       = L.i8_type context
 let i32_t      = L.i32_type context
 let i64_t      = L.i64_type context
+let float_t    = L.double_type context
 let voidptr    = L.pointer_type i8_t
 let voidptrptr = L.pointer_type voidptr
 
@@ -871,6 +872,26 @@ and check (sexpr : sExpr)          (* expression to translate *)
 
           { var   = var;
             lvar  = local;
+          }
+(*---------------------------------------------------------------------------*)  
+  | SFloatLit (i)       ->
+          let var = "_" ^ (nextEntry lastTemp) in
+
+          (* cast double to int *)
+          let const_intr = L.build_fptosi (L.const_float float_t i)
+                                          i64_t
+                                          "const" builder in
+          
+          (* create a new var that stores this int casted to void * *)
+          let local = L.build_alloca voidptr var builder in
+          let const = L.build_inttoptr const_intr
+                                       voidptr
+                                       "const" builder in
+
+          let _ = L.build_store const local builder in
+          {
+              var   = var;
+              lvar  = local;
           }
 (*---------------------------------------------------------------------------*)  
   | SCharLit (i)          ->
