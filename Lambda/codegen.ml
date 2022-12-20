@@ -1289,13 +1289,14 @@ and check (sexpr : sExpr)          (* expression to translate *)
     { var  = var;
       lvar = local;
     }
-(*---------------------------------------------------------------------------*)    
+(*---------------------------------------------------------------------------*)
  | SOrd(e) -> 
     (* construct the List Char *)
     check e typEnv llvmEnv builder
  | SChr(e) -> 
     (* construct the List Char *)
     check e typEnv llvmEnv builder
+(*
  | SSItoFP(e) -> 
     let { var   = var;
           lvar  = local; } = check e typEnv llvmEnv builder int
@@ -1303,3 +1304,4 @@ and check (sexpr : sExpr)          (* expression to translate *)
  | SFPtoSI(e) ->
     let { var   = var;
           lvar  = local; } = check e typEnv llvmEnv builder
+*)

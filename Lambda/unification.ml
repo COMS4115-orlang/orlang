@@ -53,7 +53,7 @@ let rec occurs (str : string) (tp : typ) : bool =
   | ArrowTyp(a, b) -> (occurs str a) || (occurs str b)
   | ListTyp t      -> occurs str t
 
-  (* converts a type to a string for pretty print *)
+(* converts a type to a string for pretty print *)
 let rec toString : typ -> string = function
   | Concrete s     -> s
   | Unit           -> "()"
