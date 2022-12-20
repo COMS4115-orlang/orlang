@@ -879,7 +879,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
           let var = "_" ^ (nextEntry lastTemp) in
 
           (* cast double to int *)
-          let const_intr = L.build_fptosi (L.const_float float_t i)
+          let const_intr = L.build_bitcast (L.const_float float_t i)
                                           i64_t
                                           "const" builder in
           
@@ -980,29 +980,27 @@ and check (sexpr : sExpr)          (* expression to translate *)
               | SUB  -> L.build_sub  ecast fcast "_res" builder
               | MLT  -> L.build_mul  ecast fcast "_res" builder
               | DIV  -> L.build_sdiv ecast fcast "_res" builder
-              | FADD -> let ecast_float = L.build_sitofp ecast float_t "_ecast_fp" builder in
-                        let fcast_float = L.build_sitofp fcast float_t "_fcast_fp" builder in
-                        L.build_fadd ecast_float fcast_float "_res" builder
-              | FSUB -> let ecast_float = L.build_sitofp ecast float_t "_ecast_fp" builder in
-                        let fcast_float = L.build_sitofp fcast float_t "_fcast_fp" builder in
-                        L.build_fsub ecast_float fcast_float "_res" builder
-              | FMLT -> let ecast_float = L.build_sitofp ecast float_t "_ecast_fp" builder in
-                        let fcast_float = L.build_sitofp fcast float_t "_fcast_fp" builder in
-                        L.build_fmul ecast_float fcast_float "_res" builder
-              | FDIV -> let ecast_float = L.build_sitofp ecast float_t "_ecast_fp" builder in
-                        let fcast_float = L.build_sitofp fcast float_t "_fcast_fp" builder in
-                        L.build_fdiv ecast_float fcast_float "_res" builder
               | MOD  -> L.build_srem ecast fcast "_res" builder
               | AND  -> L.build_and  ecast fcast "_res" builder
               | OR   -> L.build_or   ecast fcast "_res" builder
-              | EQ   -> L.build_icmp L.Icmp.Eq ecast fcast "_res" builder
-              | LT   -> L.build_icmp L.Icmp.Slt ecast fcast "_res" builder
-              | LTE  -> L.build_icmp L.Icmp.Sle ecast fcast "_res" builder
-              | GT   -> L.build_icmp L.Icmp.Sgt ecast fcast "_res" builder
-              | GTE  -> L.build_icmp L.Icmp.Sge ecast fcast "_res" builder
+              | FADD | FSUB | FMLT | FDIV | EQ | LT | LTE | GT | GTE ->
+                let ecast_float = L.build_sitofp ecast float_t "_ecast_fp" builder in
+                let fcast_float = L.build_sitofp fcast float_t "_fcast_fp" builder in
+                (match b with
+                  | FADD -> L.build_fadd ecast_float fcast_float "_res" builder
+                  | FSUB -> L.build_fsub ecast_float fcast_float "_res" builder
+                  | FMLT -> L.build_fmul ecast_float fcast_float "_res" builder
+                  | FDIV -> L.build_fdiv ecast_float fcast_float "_res" builder
+                  | EQ   -> L.build_fcmp L.Fcmp.Ueq ecast_float fcast_float "_res" builder
+                  | LT   -> L.build_fcmp L.Fcmp.Ult ecast_float fcast_float "_res" builder
+                  | LTE  -> L.build_fcmp L.Fcmp.Ule ecast_float fcast_float "_res" builder
+                  | GT   -> L.build_fcmp L.Fcmp.Ugt ecast_float fcast_float "_res" builder
+                  | GTE  -> L.build_fcmp L.Fcmp.Uge ecast_float fcast_float "_res" builder
+                  | _    -> raise(Failure("impossible"))
+                )
               ) in
     let rescast = (match b with
-        | FADD | FSUB | FDIV | FMLT -> let res_intcast = L.build_fptosi res i64_t "_res_intcast" builder in
+        | FADD | FSUB | FDIV | FMLT -> let res_intcast = L.build_bitcast res i64_t "_res_intcast" builder in
                                         L.build_inttoptr res_intcast voidptr "_rescast" builder
         | _ -> L.build_inttoptr res voidptr "_rescast" builder 
     ) in
