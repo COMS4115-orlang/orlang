@@ -1,6 +1,6 @@
 #!/bin/bash
 
-for i in {1..58}
+for i in {1..63}
 do
     echo "running test$i"
 

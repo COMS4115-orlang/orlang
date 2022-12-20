@@ -1,0 +1,4 @@
+let main =
+  let lst = [[1, 2, 3, 4], ['a', 'b', 'c', 'd']] in
+  let concatenatedlst = concatenate lst in
+  ()

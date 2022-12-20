@@ -1,0 +1,5 @@
+let main =
+  let lsta = [1, 2, 3, 4, 5] in
+  let lstb = [true, false, false] in
+  let lstc = extend lsta lstb in
+  ()
