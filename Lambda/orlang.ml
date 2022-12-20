@@ -20,7 +20,7 @@ let _ =
         [|_; input; output|] -> (input, output)
       | _                 -> raise (Failure ("usage: orlang.native <input-file> <output-file>"))
   in 
-  let contents = (read_file "tests/prelude.orl") ^ (read_file input) in
+  let contents = (read_file "./prelude.orl") ^ (read_file input) in
   let lexbuf = Lexing.from_string contents in
   let ast = Parser.topLevel Scanner.tokenize lexbuf in
   let env = M.empty in
