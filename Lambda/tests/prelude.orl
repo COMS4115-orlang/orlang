@@ -77,30 +77,27 @@ let reverse lst =
 
 val map : ('mapa -> 'mapb) -> List 'mapa -> List 'mapb
 let rec map f lst =
-  if |.lst.| == 0
-  then
-    []
-  else
-    let (x :: xs) = lst in
-    (f x) :: (map f xs)
+  match |.lst.| with
+  | 0         => []
+  | otherwise => let (x :: xs) = lst in
+                 (f x) :: (map f xs)
+  ;
 
 val foldl : ('foldla -> 'foldb -> 'foldla) -> 'foldla -> List 'foldb -> 'foldla
 let rec foldl f acc lst = 
-  if |.lst.| == 0
-  then
-    acc
-  else
-    let (x :: xs) = lst in
-    foldl f (f acc x) xs
+  match |.lst.| with
+  | 0         => acc
+  | otherwise => let (x :: xs) = lst in
+                 foldl f (f acc x) xs
+  ;
 
 val foldr : ('foldrb -> 'foldra -> 'foldra) -> 'foldra -> List 'foldrb -> 'foldra
 let rec foldr f acc lst =
-  if |.lst.| == 0
-  then
-    acc
-  else
-    let (x :: xs) = lst in
-    f x (foldr f acc xs)
+  match |.lst.| with
+  | 0         => acc
+  | otherwise => let (x :: xs) = lst in
+                 f x (foldr f acc xs)
+  ;
 
 val extend : List 'extenda -> List 'extenda -> List 'extenda
 let extend lsta lstb = 
@@ -108,27 +105,23 @@ let extend lsta lstb =
 
 val filter : ('filtera -> Bool) -> List 'filtera -> List 'filtera
 let rec filter p lst =
-  if |.lst.| == 0
-  then
-    []
-  else
-    let (x :: xs) = lst in
-    if (p x)
-    then
-      (x :: (filter p xs))
-    else
-      (filter p xs)
+  match |.lst.| with
+  | 0 => []
+  | otherwise => let (x :: xs) = lst in
+                 if (p x)
+                 then (x :: (filter p xs))
+                 else (filter p xs)
+  ;
 
 val sortby : ('sortbya -> 'sortbya -> Bool) -> List 'sortbya -> List 'sortbya
 let rec sortby cmp lst =
-  if |.lst.| == 0
-  then
-    []
-  else
-    let (x :: xs) = lst in
-    let lt a = cmp a x in
-    let nlt a = cmp x a in
-    extend (sortby cmp (filter lt xs)) (extend [x] (sortby cmp (filter (nlt) xs)))
+  match |.lst.| with
+  | 0 => []
+  | otherwise => let (x :: xs) = lst in
+                 let lt a = cmp a x in
+                 let nlt a = cmp x a in
+                 extend (sortby cmp (filter lt xs)) (extend [x] (sortby cmp (filter (nlt) xs)))
+  ;
 
 val sort : List 'sorta -> List 'sorta
 let sort lst = sortby (\x y -> x < y) lst
