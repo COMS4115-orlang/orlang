@@ -12,8 +12,7 @@ let the_module = L.create_module context "Orlang"
 let i8_t       = L.i8_type context
 let i32_t      = L.i32_type context
 let i64_t      = L.i64_type context
-let float_t    = L.float_type context
-let double_t   = L.double_type context
+let float_t    = L.double_type context
 let voidptr    = L.pointer_type i8_t
 let voidptrptr = L.pointer_type voidptr
 
@@ -876,6 +875,26 @@ and check (sexpr : sExpr)          (* expression to translate *)
             lvar  = local;
           }
 (*---------------------------------------------------------------------------*)  
+  | SFloatLit (i)       ->
+          let var = "_" ^ (nextEntry lastTemp) in
+
+          (* cast double to int *)
+          let const_intr = L.build_fptosi (L.const_float float_t i)
+                                          i64_t
+                                          "const" builder in
+          
+          (* create a new var that stores this int casted to void * *)
+          let local = L.build_alloca voidptr var builder in
+          let const = L.build_inttoptr const_intr
+                                       voidptr
+                                       "const" builder in
+
+          let _ = L.build_store const local builder in
+          {
+              var   = var;
+              lvar  = local;
+          }
+(*---------------------------------------------------------------------------*)  
   | SCharLit (i)          ->
           let var = "_" ^ (nextEntry lastTemp) in
 
@@ -909,7 +928,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
 
          (* create a new var that stores the float casted to void* *)
          let local = L.build_alloca voidptr var builder in
-         let const = L.build_bitcast (L.const_float double_t f)
+         let const = L.build_bitcast (L.const_float float_t f)
                                       voidptr
                                       "const" builder in
          let _ = L.build_store const local builder in
@@ -971,20 +990,36 @@ and check (sexpr : sExpr)          (* expression to translate *)
     (* apply binary operator and store result *)
     let local = L.build_alloca voidptr var builder in
     let res = (match b with
-              | ADD -> L.build_add  ecast fcast "_res" builder
-              | SUB -> L.build_sub  ecast fcast "_res" builder
-              | MLT -> L.build_mul  ecast fcast "_res" builder
-              | DIV -> L.build_sdiv ecast fcast "_res" builder
-              | MOD -> L.build_srem ecast fcast "_res" builder
-              | AND -> L.build_and  ecast fcast "_res" builder
-              | OR  -> L.build_or   ecast fcast "_res" builder
-              | EQ  -> L.build_icmp L.Icmp.Eq ecast fcast "_res" builder
-              | LT  -> L.build_icmp L.Icmp.Slt ecast fcast "_res" builder
-              | LTE -> L.build_icmp L.Icmp.Sle ecast fcast "_res" builder
-              | GT  -> L.build_icmp L.Icmp.Sgt ecast fcast "_res" builder
-              | GTE -> L.build_icmp L.Icmp.Sge ecast fcast "_res" builder
+              | ADD  -> L.build_add  ecast fcast "_res" builder
+              | SUB  -> L.build_sub  ecast fcast "_res" builder
+              | MLT  -> L.build_mul  ecast fcast "_res" builder
+              | DIV  -> L.build_sdiv ecast fcast "_res" builder
+              | FADD -> let ecast_float = L.build_sitofp ecast float_t "_ecast_fp" builder in
+                        let fcast_float = L.build_sitofp fcast float_t "_fcast_fp" builder in
+                        L.build_fadd ecast_float fcast_float "_res" builder
+              | FSUB -> let ecast_float = L.build_sitofp ecast float_t "_ecast_fp" builder in
+                        let fcast_float = L.build_sitofp fcast float_t "_fcast_fp" builder in
+                        L.build_fsub ecast_float fcast_float "_res" builder
+              | FMLT -> let ecast_float = L.build_sitofp ecast float_t "_ecast_fp" builder in
+                        let fcast_float = L.build_sitofp fcast float_t "_fcast_fp" builder in
+                        L.build_fmul ecast_float fcast_float "_res" builder
+              | FDIV -> let ecast_float = L.build_sitofp ecast float_t "_ecast_fp" builder in
+                        let fcast_float = L.build_sitofp fcast float_t "_fcast_fp" builder in
+                        L.build_fdiv ecast_float fcast_float "_res" builder
+              | MOD  -> L.build_srem ecast fcast "_res" builder
+              | AND  -> L.build_and  ecast fcast "_res" builder
+              | OR   -> L.build_or   ecast fcast "_res" builder
+              | EQ   -> L.build_icmp L.Icmp.Eq ecast fcast "_res" builder
+              | LT   -> L.build_icmp L.Icmp.Slt ecast fcast "_res" builder
+              | LTE  -> L.build_icmp L.Icmp.Sle ecast fcast "_res" builder
+              | GT   -> L.build_icmp L.Icmp.Sgt ecast fcast "_res" builder
+              | GTE  -> L.build_icmp L.Icmp.Sge ecast fcast "_res" builder
               ) in
-    let rescast = L.build_inttoptr res voidptr "_rescast" builder in
+    let rescast = (match b with
+        | FADD | FSUB | FDIV | FMLT -> let res_intcast = L.build_fptosi res i64_t "_res_intcast" builder in
+                                        L.build_inttoptr res_intcast voidptr "_rescast" builder
+        | _ -> L.build_inttoptr res voidptr "_rescast" builder 
+    ) in
     let _ = L.build_store rescast local builder in
 
     { var  = var;

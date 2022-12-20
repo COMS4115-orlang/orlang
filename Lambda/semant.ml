@@ -239,7 +239,7 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
                 sexpr = asexpr; 
                 sub = sub2; } = check arg typEnvNew in
           let funcTypSub = apply sub2 funcTypInit in
-          let funcTyp = ArrowTyp(argTyp, retTyp) in
+          let funcTyp = ArrowTyp(argTyp, retTyp) in (* test 6 error? *)
           let _, sub3 = unification funcTypSub funcTyp in
           let sub = compose (compose sub1 sub2) sub3 in
           let tp = apply sub retTyp in 
