@@ -1,0 +1,7 @@
+(* orlang program *)
+val main : ()
+let main =
+  let lst = [6, 8, 3, 5, 9, 1, 4, 2, 7] in
+  let asc = sort lst in
+  let (x::xs) = asc in
+  print_int x
