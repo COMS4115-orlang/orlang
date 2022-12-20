@@ -1300,9 +1300,10 @@ and check (sexpr : sExpr)          (* expression to translate *)
                        lvar = elvar; } = check e typEnv llvmEnv builder in
                   let var = "_" ^ (nextEntry lastTemp) in
                   (* elvar is an llvalue we can think of as int *)
+                  let elvar = L.build_load elvar "const" builder in
                   let elvar_int = L.build_ptrtoint elvar i64_t
                                                    "const" builder in
-                  L.dump_value(elvar_int);
+
                   let elvar_float = L.build_sitofp elvar_int float_t
                                                    "const" builder in
                   (* cast double to int *)
@@ -1315,6 +1316,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
                   let const = L.build_inttoptr elvar_int
                                                voidptr
                                                "const" builder in
+                  print_endline (L.string_of_llvalue local);
                   let _ = L.build_store const local builder in
 
                   { var = var;
@@ -1325,6 +1327,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
                        lvar = elvar; } = check e typEnv llvmEnv builder in
                   let var = "_" ^ (nextEntry lastTemp) in
                   (* elvar is an llvalue we can think of as double *)
+                  let elvar = L.build_load elvar "const" builder in
                   let elvar_int = L.build_ptrtoint elvar i64_t
                                                    "const" builder in
                   let elvar_float = L.build_bitcast elvar_int float_t
@@ -1333,7 +1336,7 @@ and check (sexpr : sExpr)          (* expression to translate *)
                                                  "const" builder in
 
                   let local = L.build_alloca voidptr var builder in
-                  let const = L.build_inttoptr elvar_int_fin voidptr
+                  let const = L.build_inttoptr elvar_int voidptr
                                                "const" builder in
                   let _ = L.build_store const local builder in
 

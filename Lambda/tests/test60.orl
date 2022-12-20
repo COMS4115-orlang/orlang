@@ -1,6 +1,6 @@
 let main = 
-  let y = (5. %. 3.) in
-  print_int_endline (fptosi y)
+  let y = (10 * 3) in
+  print_int_endline (fptosi (sitofp y))
 
 
 
