@@ -1303,6 +1303,12 @@ and check (sexpr : sExpr)          (* expression to translate *)
                   let elvar = L.build_load elvar "const" builder in
                   let elvar_int = L.build_ptrtoint elvar i64_t
                                                    "const" builder in
+                  let elvar_float = L.build_sitofp elvar_int float_t
+                                                   "const" builder in
+                  (* cast double to int *)
+                  let const_intr = L.build_bitcast elvar_float
+                                                  i64_t
+                                                  "const" builder in
 
                   (* create a new var that stores this int casted to void * *)
                   let local = L.build_alloca voidptr var builder in
@@ -1322,6 +1328,10 @@ and check (sexpr : sExpr)          (* expression to translate *)
                   let elvar = L.build_load elvar "const" builder in
                   let elvar_int = L.build_ptrtoint elvar i64_t
                                                    "const" builder in
+                  let elvar_float = L.build_bitcast elvar_int float_t
+                                                 "const" builder in
+                  let elvar_int_fin = L.build_fptosi elvar_float i64_t
+                                                 "const" builder in
                   let local = L.build_alloca voidptr var builder in
                   let const = L.build_inttoptr elvar_int_fin voidptr
                                                "const" builder in
