@@ -1,25 +1,28 @@
-val fnList : List (Int -> Int)
-let fnList = 
-  let f = (\x -> x + 1) in
-  let g = (\x -> x * 2) in
-  let h = (\x -> x % 3) in
-  [f, g, h]
-
-val print_list : List Int -> List ()
-let print_list lst = map (\x -> print (extend (string_of_int x) [' '])) lst
-
-let applyFnList flist alist = 
-  let rec applyHelper fs as acc = 
+let applyFnList flist alist =
+  let rec applyHelper fs as acc =
     match |.fs.| with
-    | 0         => reverse acc 
+    | 0         => reverse acc
     | otherwise => let (f::ff) = fs in
                    let (a::aa) = as in
                    applyHelper ff aa ((f a)::acc)
     ;
   in applyHelper flist alist []
 
+val fnList : List (Int -> Int -> Int)
+let fnList =
+  let add = (\x y -> x + y) in
+  let subtract = (\x y -> x - y) in
+  let multiply = (\x y -> x * y) in
+  [add, subtract, multiply]
+
+val print_list : List Int -> List ()
+let print_list lst = map (\x -> print (extend (string_of_int x) [' '])) lst
+
 val main : ()
-let main = 
-  let lst = [-1, 5, 4115] in
-  let pnt = print_list (applyFnList fnList lst)
+let main =
+  let lst1 = [1, 2, 3] in
+  let lst2 = [4, 5, 6] in
+  let curried = applyFnList fnList lst1 in
+  let res = applyFnList curried lst2 in
+  let pnt = print_list res
   in ()
