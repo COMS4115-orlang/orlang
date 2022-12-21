@@ -10,10 +10,10 @@ let applyFnList flist alist =
 
 val fnList : List (Int -> Int -> Int)
 let fnList =
-  let add = (\x y -> x + y) in
-  let subtract = (\x y -> x - y) in
-  let multiply = (\x y -> x * y) in
   [add, subtract, multiply]
+  where add      = (\x y -> x + y)
+    and subtract = (\x y -> x - y)
+    and multiply = (\x y -> x * y)
 
 val print_list : List Int -> List ()
 let print_list lst = map (\x -> print (extend (string_of_int x) [' '])) lst

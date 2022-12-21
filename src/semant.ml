@@ -31,29 +31,33 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
   | Hint(ListLit(lst), t) ->
        if (List.length lst) = 0
        then 
-         let tv = nextTypVar last in
-         let (ut, sub) = unification tv t in
-         { tp = ut;
-           sexpr = (ut, (SListLit []));
-           sub = sub;
+         { tp = t;
+           sexpr = (t, (SListLit []));
+           sub = M.empty;
          }
        else
-         let rec checkHomogeneous tpList =
-             (match tpList with
-               | x::y::xs  -> (x = y) && checkHomogeneous (y::xs)  
-               | _         -> true)
-         in
-         let checkedList = List.map (fun e -> check e typEnv) lst in
-         if checkHomogeneous (List.map (fun c -> c.tp) checkedList)
-         then
-             let checkedElem = List.hd checkedList in
-             let (lstTyp, lstSub)  = unification (ListTyp checkedElem.tp) t in
-             let sexprList = List.map (fun x -> x.sexpr) checkedList in
-             { tp    = lstTyp;
-               sexpr = (lstTyp, SListLit sexprList);
-               sub   = lstSub;
-             }
-         else raise (Failure("List type is not homogeneous"))
+         let (typEnv, sub1, tacc, sacc) = List.fold_right (fun e (typEnv, sub, acc, sacc) -> 
+                                                            let { tp = tp;
+                                                                  sexpr = sexpr;
+                                                                  sub = sub2; } = check e typEnv in
+                                                            let typEnv = applyte sub2 typEnv in
+                                                            let sub = compose sub sub2 in
+                                                            (typEnv, sub, tp :: acc, sexpr :: sacc)) 
+                                                          lst
+                                                          (typEnv, M.empty, [], []) in
+         let (commontp, sub2) = List.fold_right (fun tp (commontp, sub) ->
+                                                  let (tu, sub2) = unification tp commontp in
+                                                  let sub = compose sub sub2 in
+                                                  (tu, sub))
+                                                tacc
+                                                (nextTypVar last, M.empty) in
+         let (tu, sub3) = unification t (ListTyp commontp) in
+         let sub = compose (compose sub1 sub2) sub3 in
+
+         { tp    = tu;
+           sexpr = (tu, SListLit sacc);
+           sub   = sub;
+         }
   (*---------------------------------------------------------------------------*)  
   | Hint(Binop(b, e, f), t)     ->
          let (commonT, returnT) = (match b with
