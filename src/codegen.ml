@@ -295,26 +295,25 @@ let printFunc : L.llvalue =
     let c' = L.build_pointercast loadc voidptrptr "_cptr" next_b in 
     (* cast to void** for some reason *)
 
-(*---*)
-  let sptrval' = L.build_load c' "_sptrval" next_b in 
-  let vptr1 = L.build_pointercast sptrval' voidptrptr "_vptr" next_b in 
-  let value = L.build_load vptr1 "_value" next_b in 
-  let parg = L.build_ptrtoint value i64_t "_parg" next_b in
-  let charify = L.build_trunc parg i32_t "_chard" next_b in
+    (* prepare element for printing *)
+    let sptrval' = L.build_load c' "_sptrval" next_b in 
+    let vptr1 = L.build_pointercast sptrval' voidptrptr "_vptr" next_b in 
+    let value = L.build_load vptr1 "_value" next_b in 
+    let parg = L.build_ptrtoint value i64_t "_parg" next_b in
+    let charify = L.build_trunc parg i32_t "_chard" next_b in
 
-  (* declare printf prototype *)
-  let formatString = L.const_stringz context "%c" in
-  let global = L.define_global "formatString" formatString the_module in
-  let _ = L.set_unnamed_addr true global in
-  let printf = L.declare_function "printf" (L.var_arg_function_type i32_t [|voidptr|])
-                                 the_module in
+    (* declare printf prototype *)
+    let formatString = L.const_stringz context "%c" in
+    let global = L.define_global "formatString" formatString the_module in
+    let _ = L.set_unnamed_addr true global in
+    let printf = L.declare_function "printf" (L.var_arg_function_type i32_t [|voidptr|])
+                                   the_module in
 
-  (* call printf *)
-  let castglobal = L.build_in_bounds_gep global 
-                   [|L.const_int i64_t 0; L.const_int i64_t 0|] 
-                   "_castglobal" next_b in
-  let _ = L.build_call printf [| castglobal; charify|] "_" next_b in
-(*---*)
+    (* call printf *)
+    let castglobal = L.build_in_bounds_gep global 
+                     [|L.const_int i64_t 0; L.const_int i64_t 0|] 
+                     "_castglobal" next_b in
+    let _ = L.build_call printf [| castglobal; charify|] "_" next_b in
 
     let sptr'   = L.build_gep c' [|(L.const_int i64_t 1)|] "" next_b in
     let sptrval = L.build_load sptr' "_sptrvalx" next_b in (* get pointer to val *)
@@ -515,12 +514,12 @@ let rec cppfunction (name : string)           (* name of the function *)
    acts essentially as a lambda function written in C: each function has a
    unique corresponding class with its call operator and its capture *)
 and cppCfunction (name : string)           (* name of the function *)
-                    (args : string list)            (* argument name *)
-                    (body : (sExpr *          (* sExpr of function body *)
-                             typeEnvironm))   (* env to evaluate the body in *)
-                    (typEnv : typeEnvironm)   (* the type environment *)
-                    : L.llvalue               (* llvalue of the init function *)
-                    = 
+                 (args : string list)      (* argument names *)
+                 (body : (sExpr *          (* sExpr of function body *)
+                          typeEnvironm))   (* env to evaluate the body in *)
+                 (typEnv : typeEnvironm)   (* the type environment *)
+                 : L.llvalue               (* llvalue of the init function *)
+                 = 
     let dummyScheme = Scheme([], (Concrete "Int")) in
     let rec addAllArgs m al =
         match al with
@@ -624,11 +623,11 @@ and cppCfunction (name : string)           (* name of the function *)
    acts essentially as a lambda function written in C: each function has a
    unique corresponding class with its call operator and its capture *)
 and cppMfunction (name : string)           (* name of the function *)
-                    (args : string list)            (* argument name *)
-                    (body : (sExpr *          (* sExpr of function body *)
-                             typeEnvironm))   (* env to evaluate the body in *)
-                    (typEnv : typeEnvironm)   (* the type environment *)
-                    : L.llvalue               (* llvalue of the init function *)
+                 (args : string list)      (* argument names *)
+                 (body : (sExpr *          (* sExpr of function body *)
+                          typeEnvironm))   (* env to evaluate the body in *)
+                 (typEnv : typeEnvironm)   (* the type environment *)
+                 : L.llvalue               (* llvalue of the init function *)
                     = 
     let dummyScheme = Scheme([], (Concrete "Int")) in
     let rec addAllArgs m al =
@@ -904,135 +903,132 @@ and check (sexpr : sExpr)          (* expression to translate *)
 
           local'
 (*---------------------------------------------------------------------------*)  
-  | SBinop (b, e, f)     ->
-    let elvar = check e typEnv llvmEnv builder in
-    let flvar = check f typEnv llvmEnv builder in
+ | SBinop (b, e, f)     ->
+     let elvar = check e typEnv llvmEnv builder in
+     let flvar = check f typEnv llvmEnv builder in
 
-    (* load vars and cast them to long long *)
-    let eload = L.build_load elvar "_eload" builder in
-    let ecast = L.build_ptrtoint eload i64_t "_ecast" builder in
-    let fload = L.build_load flvar "_fload" builder in
-    let fcast = L.build_ptrtoint fload i64_t "_fcast" builder in
+     (* load vars and cast them to long long *)
+     let eload = L.build_load elvar "_eload" builder in
+     let ecast = L.build_ptrtoint eload i64_t "_ecast" builder in
+     let fload = L.build_load flvar "_fload" builder in
+     let fcast = L.build_ptrtoint fload i64_t "_fcast" builder in
     
-    (* apply binary operator and store result *)
-    let local = L.build_alloca voidptr "_local" builder in
-    let res = (match b with
-              | ADD  -> L.build_add  ecast fcast "_res" builder
-              | SUB  -> L.build_sub  ecast fcast "_res" builder
-              | MLT  -> L.build_mul  ecast fcast "_res" builder
-              | DIV  -> L.build_sdiv ecast fcast "_res" builder
-              | MOD  -> L.build_srem ecast fcast "_res" builder
-              | AND  -> L.build_and  ecast fcast "_res" builder
-              | OR   -> L.build_or   ecast fcast "_res" builder
-              | FADD | FSUB | FMLT | FDIV | FMOD ->
-                let ecast_float = L.build_bitcast ecast float_t "_ecast_fp" builder in
-                let fcast_float = L.build_bitcast fcast float_t "_fcast_fp" builder in
-                (match b with
-                  | FADD -> L.build_fadd ecast_float fcast_float "_res" builder
-                  | FSUB -> L.build_fsub ecast_float fcast_float "_res" builder
-                  | FMLT -> L.build_fmul ecast_float fcast_float "_res" builder
-                  | FDIV -> L.build_fdiv ecast_float fcast_float "_res" builder
-                  | FMOD -> L.build_frem ecast_float fcast_float "_res" builder 
-                  | _    -> raise(Failure("impossible"))
-                )
-              | EQ | LT | LTE | GT | GTE ->
-                let ecast_float = L.build_sitofp ecast float_t "_ecast_fp" builder in
-                let fcast_float = L.build_sitofp fcast float_t "_fcast_fp" builder in
-                (match b with
-                  | EQ   -> L.build_fcmp L.Fcmp.Ueq ecast_float fcast_float "_res" builder
-                  | LT   -> L.build_fcmp L.Fcmp.Ult ecast_float fcast_float "_res" builder
-                  | LTE  -> L.build_fcmp L.Fcmp.Ule ecast_float fcast_float "_res" builder
-                  | GT   -> L.build_fcmp L.Fcmp.Ugt ecast_float fcast_float "_res" builder
-                  | GTE  -> L.build_fcmp L.Fcmp.Uge ecast_float fcast_float "_res" builder
-                  | _    -> raise(Failure("impossible"))
-                )
-              ) in
-    let rescast = (match b with
-        | FADD | FSUB | FDIV | FMLT | FMOD -> let res_intcast = L.build_bitcast res i64_t "_res_intcast" builder in
-                                              L.build_inttoptr res_intcast voidptr "_rescast" builder
-        | _ -> L.build_inttoptr res voidptr "_rescast" builder 
-    ) in
-    let _ = L.build_store rescast local builder in
-
-    local
+     (* apply binary operator and store result *)
+     let local = L.build_alloca voidptr "_local" builder in
+     let res = (match b with
+               | ADD  -> L.build_add  ecast fcast "_res" builder
+               | SUB  -> L.build_sub  ecast fcast "_res" builder
+               | MLT  -> L.build_mul  ecast fcast "_res" builder
+               | DIV  -> L.build_sdiv ecast fcast "_res" builder
+               | MOD  -> L.build_srem ecast fcast "_res" builder
+               | AND  -> L.build_and  ecast fcast "_res" builder
+               | OR   -> L.build_or   ecast fcast "_res" builder
+               | FADD | FSUB | FMLT | FDIV | FMOD ->
+                 let ecast_float = L.build_bitcast ecast float_t "_ecast_fp" builder in
+                 let fcast_float = L.build_bitcast fcast float_t "_fcast_fp" builder in
+                 (match b with
+                   | FADD -> L.build_fadd ecast_float fcast_float "_res" builder
+                   | FSUB -> L.build_fsub ecast_float fcast_float "_res" builder
+                   | FMLT -> L.build_fmul ecast_float fcast_float "_res" builder
+                   | FDIV -> L.build_fdiv ecast_float fcast_float "_res" builder
+                   | FMOD -> L.build_frem ecast_float fcast_float "_res" builder 
+                   | _    -> raise(Failure("impossible"))
+                 )
+               | EQ | LT | LTE | GT | GTE ->
+                 let ecast_float = L.build_sitofp ecast float_t "_ecast_fp" builder in
+                 let fcast_float = L.build_sitofp fcast float_t "_fcast_fp" builder in
+                 (match b with
+                   | EQ   -> L.build_fcmp L.Fcmp.Ueq ecast_float fcast_float "_res" builder
+                   | LT   -> L.build_fcmp L.Fcmp.Ult ecast_float fcast_float "_res" builder
+                   | LTE  -> L.build_fcmp L.Fcmp.Ule ecast_float fcast_float "_res" builder
+                   | GT   -> L.build_fcmp L.Fcmp.Ugt ecast_float fcast_float "_res" builder
+                   | GTE  -> L.build_fcmp L.Fcmp.Uge ecast_float fcast_float "_res" builder
+                   | _    -> raise(Failure("impossible"))
+                 )
+               ) in
+     let rescast = (match b with
+         | FADD | FSUB | FDIV | FMLT | FMOD -> let res_intcast = L.build_bitcast res 
+          									 i64_t 
+                                                                                 "_res_intcast" builder in
+                                               L.build_inttoptr res_intcast voidptr "_rescast" builder
+         | _ -> L.build_inttoptr res voidptr "_rescast" builder 
+     ) in
+     let _ = L.build_store rescast local builder in
+     local
 (*---------------------------------------------------------------------------*)  
-  | SLCons (e, f)    ->
-    let elvar = check e typEnv llvmEnv builder in
-    let flvar = check f typEnv llvmEnv builder in
+ | SLCons (e, f)    ->
+     let elvar = check e typEnv llvmEnv builder in
+     let flvar = check f typEnv llvmEnv builder in
 
-    let local = L.build_array_malloc voidptr (L.const_int i64_t 2) "_local" builder in
+     let local = L.build_array_malloc voidptr (L.const_int i64_t 2) "_local" builder in
 
-    let elem = L.build_load elvar "_elem" builder in
-    let heapd = L.build_malloc voidptr "_heapd" builder in
-    let _ = L.build_store elem heapd builder in 
-    let avptr = L.build_pointercast heapd voidptr "_avptr" builder in
-    let _ = L.build_store avptr local builder in
+     let elem = L.build_load elvar "_elem" builder in
+     let heapd = L.build_malloc voidptr "_heapd" builder in
+     let _ = L.build_store elem heapd builder in 
+     let avptr = L.build_pointercast heapd voidptr "_avptr" builder in
+     let _ = L.build_store avptr local builder in
 
-    let sptr  = L.build_gep local [|(L.const_int i64_t 1)|] "_sptr" builder in
-    let fload = L.build_load flvar "" builder in
-    let flptr = L.build_pointercast fload voidptr "_avptr" builder in
-    let _     = L.build_store flptr sptr builder in
-              
-    let resptr = L.build_alloca voidptr "" builder in
-    let res = L.build_pointercast local voidptr "" builder in
-    let _ = L.build_store res resptr builder in
-
-    resptr
+     let sptr  = L.build_gep local [|(L.const_int i64_t 1)|] "_sptr" builder in
+     let fload = L.build_load flvar "" builder in
+     let flptr = L.build_pointercast fload voidptr "_avptr" builder in
+     let _     = L.build_store flptr sptr builder in
+               
+     let resptr = L.build_alloca voidptr "" builder in
+     let res = L.build_pointercast local voidptr "" builder in
+     let _ = L.build_store res resptr builder in
+     resptr
 (*---------------------------------------------------------------------------*)  
-  | SLLen (e)    ->
-    let elvar = check e typEnv llvmEnv builder in
-    let lenfunc = lenFunc in
+ | SLLen (e)    ->
+     let elvar = check e typEnv llvmEnv builder in
+     let lenfunc = lenFunc in
 
-    let eptr = L.build_pointercast elvar voidptrptr "_eeeeptr" builder in 
-    (* cast to void** for some reason *)
-    let loadeptr = L.build_load eptr "_loadddddd" builder in
-    let xptr = L.build_inttoptr loadeptr voidptr "_xptrdddd" builder in 
-    (* cast to void** for some reason *)
-    (* result stuff *)
-    let local = L.build_alloca voidptr "_local" builder in
-    let call = L.build_call lenfunc [|xptr|] "callddd" builder in
-    let _ = L.build_store call local builder in
-
-    local
+     let eptr = L.build_pointercast elvar voidptrptr "_eeeeptr" builder in 
+     (* cast to void** for some reason *)
+     let loadeptr = L.build_load eptr "_loadddddd" builder in
+     let xptr = L.build_inttoptr loadeptr voidptr "_xptrdddd" builder in 
+     (* cast to void** for some reason *)
+     (* result stuff *)
+     let local = L.build_alloca voidptr "_local" builder in
+     let call = L.build_call lenfunc [|xptr|] "callddd" builder in
+     let _ = L.build_store call local builder in
+     local
 (*---------------------------------------------------------------------------*)  
-  | SUnop (b, e)     ->
-    let elvar = check e typEnv llvmEnv builder in
+ | SUnop (b, e)     ->
+     let elvar = check e typEnv llvmEnv builder in
 
-    (* load var and cast it to long long *)
-    let eload = L.build_load elvar "_eload" builder in
-    let ecast = L.build_ptrtoint eload i64_t "_ecast" builder in
+     (* load var and cast it to long long *)
+     let eload = L.build_load elvar "_eload" builder in
+     let ecast = L.build_ptrtoint eload i64_t "_ecast" builder in
 
-    (* apply unary operator and store result *)
-    let local = L.build_alloca voidptr "_local" builder in
-    let res = (match b with
-              | NOT -> L.build_not  ecast "_res" builder
-              ) in
-    let rescast = L.build_inttoptr res voidptr "_rescast" builder in
-    let _ = L.build_store rescast local builder in
+     (* apply unary operator and store result *)
+     let local = L.build_alloca voidptr "_local" builder in
+     let res = (match b with
+               | NOT -> L.build_not  ecast "_res" builder
+               ) in
+     let rescast = L.build_inttoptr res voidptr "_rescast" builder in
+     let _ = L.build_store rescast local builder in
+     local
+(*---------------------------------------------------------------------------*)  
+ | SIf (c, t, e)     ->
+     (* generate code that produces the condition,
+        the then value (wrapped in a lambda) and
+        the else value (wrapped in a lambda) *)
+     let clvar = check c typEnv llvmEnv builder in
+     let tlvar = check t typEnv llvmEnv builder in
+     let elvar = check e typEnv llvmEnv builder in
+
+     (* allocate space for result *)
+     let local = L.build_alloca voidptr "_local" builder in
+
+     let _if = ifFunc in
     
-    local
-(*---------------------------------------------------------------------------*)  
-  | SIf (c, t, e)     ->
-    (* generate code that produces the condition,
-       the then value (wrapped in a lambda) and
-       the else value (wrapped in a lambda) *)
-    let clvar = check c typEnv llvmEnv builder in
-    let tlvar = check t typEnv llvmEnv builder in
-    let elvar = check e typEnv llvmEnv builder in
-
-    (* allocate space for result *)
-    let local = L.build_alloca voidptr "_local" builder in
-
-    let _if = ifFunc in
-    
-    (* call apply function and store result in llvalue *)
-    let cload = L.build_load clvar "_cload" builder in
-    let tload = L.build_load tlvar "_tload" builder in
-    let eload = L.build_load elvar "_eload" builder in
-    let call = L.build_call _if [|cload; tload; eload|] "call" builder in
-    let _ = L.build_store call local builder in
-
-    local
+     (* call apply function and store result in llvalue *)
+     let cload = L.build_load clvar "_cload" builder in
+     let tload = L.build_load tlvar "_tload" builder in
+     let eload = L.build_load elvar "_eload" builder in
+     let call = L.build_call _if [|cload; tload; eload|] "call" builder in
+     let _ = L.build_store call local builder in
+     local
 (*---------------------------------------------------------------------------*)  
   | SLambda (LVar(v), e) -> 
           let name = nextEntry lastClass in
@@ -1078,29 +1074,29 @@ and check (sexpr : sExpr)          (* expression to translate *)
           local
 (*---------------------------------------------------------------------------*)  
   | SLet (SBinding(LVar(v), e, _), f)  ->
-        let w = (match e with
-                 | (_, SLambda(LVar(w), _)) -> w
-                 | _ -> assert false)
-        in
-        let name = nextEntry lastClass in
-        let typEnvNew = M.add v (Scheme ([], Concrete "Int")) typEnv in
+          let w = (match e with
+                   | (_, SLambda(LVar(w), _)) -> w
+                   | _ -> assert false)
+          in
+          let name = nextEntry lastClass in
+          let typEnvNew = M.add v (Scheme ([], Concrete "Int")) typEnv in
 
-        let llvm_init = cppfunction name v (f, typEnvNew) typEnv in
-        let llvm_app = fix name v w typEnv (e, typEnvNew) in
+          let llvm_init = cppfunction name v (f, typEnvNew) typEnv in
+          let llvm_app = fix name v w typEnv (e, typEnvNew) in
         
-        (* special code generation for recursive let-bindings *)
-        let ltmp = cppfunctioninst llvm_init v typEnv llvmEnv builder in
+          (* special code generation for recursive let-bindings *)
+          let ltmp = cppfunctioninst llvm_init v typEnv llvmEnv builder in
 
-        (* allocate space for result *)
-        let local = L.build_alloca voidptr "local" builder in
+          (* allocate space for result *)
+          let local = L.build_alloca voidptr "local" builder in
 
-        (* call apply function and store result *)
-        let tmpload = L.build_load ltmp "_tmpload" builder in
-        let llvmArgs = [tmpload] @ (loadEnvExcept typEnv llvmEnv v builder) in
-        let call = L.build_call llvm_app (Array.of_list llvmArgs) "call" builder in
-        let _ = L.build_store call local builder in
+          (* call apply function and store result *)
+          let tmpload = L.build_load ltmp "_tmpload" builder in
+          let llvmArgs = [tmpload] @ (loadEnvExcept typEnv llvmEnv v builder) in
+          let call = L.build_call llvm_app (Array.of_list llvmArgs) "call" builder in
+          let _ = L.build_store call local builder in
+          local
 
-        local
  | SLet (SCBinding(lhs, e), f) ->
           let name = nextEntry lastClass in
           let vlist = List.map (fun (LVar v) -> v) lhs in 
@@ -1123,8 +1119,8 @@ and check (sexpr : sExpr)          (* expression to translate *)
           
           (* apply e to the function *)
           let local = callApply ltmp elvar builder in
-
           local
+
  | SLet (SMBinding(lhs, e), f) ->
           let name = nextEntry lastClass in
           let vlist = List.map (fun (LVar v) -> v) lhs in 
@@ -1147,67 +1143,63 @@ and check (sexpr : sExpr)          (* expression to translate *)
           
           (* apply e to the function *)
           let local = callApply ltmp elvar builder in
-
           local
+
 (*---------------------------------------------------------------------------*)  
  | SPrint(e) -> 
-    (* construct the List Char *)
-    let elvar = check e typEnv llvmEnv builder in
+     (* construct the List Char *)
+     let elvar = check e typEnv llvmEnv builder in
+     let printfunc = printFunc in
 
-    let printfunc = printFunc in
+     (* cast to void** for some reason *)
+     let eptr = L.build_pointercast elvar voidptrptr "_eeeeptr" builder in 
+     let loadeptr = L.build_load eptr "_loadddddd" builder in
+     (* cast to void** for some reason *)
+     let xptr = L.build_inttoptr loadeptr voidptr "_xptrdddd" builder in 
 
-    let eptr = L.build_pointercast elvar voidptrptr "_eeeeptr" builder in 
-    (* cast to void** for some reason *)
-    let loadeptr = L.build_load eptr "_loadddddd" builder in
-    let xptr = L.build_inttoptr loadeptr voidptr "_xptrdddd" builder in 
-    (* cast to void** for some reason *)
-    (* result stuff *)
-    let local = L.build_alloca voidptr "_local" builder in
-    let call = L.build_call printfunc [|xptr|] "callddd" builder in
-    let _ = L.build_store call local builder in
-
-    local
+     (* result stuff *)
+     let local = L.build_alloca voidptr "_local" builder in
+     let call = L.build_call printfunc [|xptr|] "callddd" builder in
+     let _ = L.build_store call local builder in
+     local
 (*---------------------------------------------------------------------------*)
  | SOrd(e) -> 
-    (* construct the List Char *)
-    check e typEnv llvmEnv builder
+     (* construct the List Char *)
+     check e typEnv llvmEnv builder
  | SChr(e) -> 
-    (* construct the List Char *)
-    check e typEnv llvmEnv builder
- | SSItoFP(e) -> (let elvar = check e typEnv llvmEnv builder in
-                  (* elvar is an llvalue we can think of as int *)
-                  let elvar = L.build_load elvar "const" builder in
-                  let elvar_int = L.build_ptrtoint elvar i64_t
-                                                   "const" builder in
-                  let elvar_float = L.build_sitofp elvar_int float_t
-                                                   "const" builder in
-                  (* cast double to int *)
-                  let const_intr = L.build_bitcast elvar_float
-                                                  i64_t
-                                                  "const" builder in
+     (* construct the List Char *)
+     check e typEnv llvmEnv builder
+ | SSItoFP(e) -> 
+     let elvar = check e typEnv llvmEnv builder in
+     (* elvar is an llvalue we can think of as int *)
+     let elvar = L.build_load elvar "const" builder in
+     let elvar_int = L.build_ptrtoint elvar i64_t "const" builder in
+     let elvar_float = L.build_sitofp elvar_int float_t "const" builder in
+     (* cast double to int *)
+     let const_intr = L.build_bitcast elvar_float
+                                      i64_t
+                                      "const" builder in
 
-                  (* create a new var that stores this int casted to void * *)
-                  let local = L.build_alloca voidptr "_local" builder in
-                  let const = L.build_inttoptr const_intr
-                                               voidptr
-                                               "const" builder in
-                  let _ = L.build_store const local builder in
-
-                  local
-                 )
- | SFPtoSI(e) -> (let elvar = check e typEnv llvmEnv builder in
-                  (* elvar is an llvalue we can think of as double *)
-                  let elvar = L.build_load elvar "const" builder in
-                  let elvar_int = L.build_ptrtoint elvar i64_t
-                                                   "const" builder in
-                  let elvar_float = L.build_bitcast elvar_int float_t
-                                                 "const" builder in
-                  let elvar_int_fin = L.build_fptosi elvar_float i64_t
-                                                 "const" builder in
-                  let local = L.build_alloca voidptr "_local" builder in
-                  let const = L.build_inttoptr elvar_int_fin voidptr
-                                               "const" builder in
-                  let _ = L.build_store const local builder in
-
-                  local
-                 )
+     (* create a new var that stores this int casted to void * *)
+     let local = L.build_alloca voidptr "_local" builder in
+     let const = L.build_inttoptr const_intr
+                                  voidptr
+                                  "const" builder in
+     let _ = L.build_store const local builder in
+     local
+                 
+ | SFPtoSI(e) -> 
+     let elvar = check e typEnv llvmEnv builder in
+     (* elvar is an llvalue we can think of as double *)
+     let elvar = L.build_load elvar "const" builder in
+     let elvar_int = L.build_ptrtoint elvar i64_t "const" builder in
+     let elvar_float = L.build_bitcast elvar_int float_t "const" builder in
+     let elvar_int_fin = L.build_fptosi elvar_float 
+                                        i64_t
+                                        "const" builder in
+     let local = L.build_alloca voidptr "_local" builder in
+     let const = L.build_inttoptr elvar_int_fin 
+                                  voidptr
+                                  "const" builder in
+     let _ = L.build_store const local builder in
+     local
