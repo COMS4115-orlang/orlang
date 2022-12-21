@@ -1,6 +1,0 @@
-(* unification error: fac must be used monomorphically in definition *)
-
-let rec fac n = if n then fac true
-                     else fac 0
-
-let main = fac false

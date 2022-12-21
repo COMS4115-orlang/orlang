@@ -1,5 +1,0 @@
-(* unification error: no valid type for fac *)
-
-let rec fac n = (\x -> x + (fac 1))
-
-let main = fac 1

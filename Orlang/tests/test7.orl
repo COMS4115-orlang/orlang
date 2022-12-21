@@ -1,3 +1,0 @@
-(* unification error: main must be of type int *)
-
-let main = (\x -> x + 1)

@@ -1,5 +1,0 @@
-(* error: infinite type *)
-
-let f = (\x -> x x)
-
-let main = f f
