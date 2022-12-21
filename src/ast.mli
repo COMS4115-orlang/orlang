@@ -8,9 +8,9 @@ type typ =
   | ArrowTyp of typ * typ
   | ListTyp of typ
 
-type binop = ADD | SUB | MLT | DIV | MOD 
-           | AND | OR 
-           | EQ | LT | LTE | GT | GTE 
+type binop = ADD  | SUB  | MLT  | DIV  | MOD 
+           | AND  | OR 
+           | EQ   | LT   | LTE  | GT   | GTE 
            | FADD | FSUB | FMLT | FDIV | FMOD
 
 type unop = NOT

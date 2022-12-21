@@ -14,274 +14,274 @@ module S = Set.Make(String)
 let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
   match expr with
   | NoHint(x) ->
-          check (Hint(x, nextTypVar last)) typEnv
+       check (Hint(x, nextTypVar last)) typEnv
 (*---------------------------------------------------------------------------*)  
   | Hint(Var (s), t)             -> 
-          (* Instantiation of forall types is done at this step;
-             This also checks for referencing of undefined vars *)
-          if M.mem s typEnv
-          then
-              let (tp, sub) = unification (instantiate (M.find s typEnv)) t in
-              { tp    = tp;
-                sexpr = (tp, SVar s);
-                sub   = sub;
-              }
-          else raise (Failure("use of undefined variable " ^ s))
+       (* Instantiation of forall types is done at this step;
+          This also checks for referencing of undefined vars *)
+       if M.mem s typEnv
+       then
+           let (tp, sub) = unification (instantiate (M.find s typEnv)) t in
+           { tp    = tp;
+             sexpr = (tp, SVar s);
+             sub   = sub;
+           }
+       else raise (Failure("use of undefined variable " ^ s))
 (*---------------------------------------------------------------------------*)  
   | Hint(ListLit(lst), t) ->
-          if (List.length lst) = 0
-          then 
-            let tv = nextTypVar last in
-            let (ut, sub) = unification tv t in
-            { tp = ut;
-              sexpr = (ut, (SListLit []));
-              sub = sub;
-            }
-          else
-            let rec checkHomogeneous tpList =
-                (match tpList with
-                  | x::y::xs  -> (x = y) && checkHomogeneous (y::xs)  
-                  | _         -> true)
-            in
-            let checkedList = List.map (fun e -> check e typEnv) lst in
-            if checkHomogeneous (List.map (fun c -> c.tp) checkedList)
-            then
-                let checkedElem = List.hd checkedList in
-                let (lstTyp, lstSub)  = unification (ListTyp checkedElem.tp) t in
-                let sexprList = List.map (fun x -> x.sexpr) checkedList in
-                { tp    = lstTyp;
-                  sexpr = (lstTyp, SListLit sexprList);
-                  sub   = lstSub;
-                }
-            else raise (Failure("List type is not homogeneous"))
+       if (List.length lst) = 0
+       then 
+         let tv = nextTypVar last in
+         let (ut, sub) = unification tv t in
+         { tp = ut;
+           sexpr = (ut, (SListLit []));
+           sub = sub;
+         }
+       else
+         let rec checkHomogeneous tpList =
+             (match tpList with
+               | x::y::xs  -> (x = y) && checkHomogeneous (y::xs)  
+               | _         -> true)
+         in
+         let checkedList = List.map (fun e -> check e typEnv) lst in
+         if checkHomogeneous (List.map (fun c -> c.tp) checkedList)
+         then
+             let checkedElem = List.hd checkedList in
+             let (lstTyp, lstSub)  = unification (ListTyp checkedElem.tp) t in
+             let sexprList = List.map (fun x -> x.sexpr) checkedList in
+             { tp    = lstTyp;
+               sexpr = (lstTyp, SListLit sexprList);
+               sub   = lstSub;
+             }
+         else raise (Failure("List type is not homogeneous"))
   (*---------------------------------------------------------------------------*)  
   | Hint(Binop(b, e, f), t)     ->
-          let (commonT, returnT) = (match b with
-          | ADD -> (Concrete "Int", Concrete "Int")
-          | FADD -> (Concrete "Float", Concrete "Float")
-          | SUB -> (Concrete "Int", Concrete "Int")
-          | FSUB -> (Concrete "Float", Concrete "Float")
-          | MLT -> (Concrete "Int", Concrete "Int")
-          | FMLT -> (Concrete "Float", Concrete "Float")
-          | DIV -> (Concrete "Int", Concrete "Int")
-          | FDIV -> (Concrete "Float", Concrete "Float")
-          | MOD -> (Concrete "Int", Concrete "Int")
-          | FMOD -> (Concrete "Float", Concrete "Float")
-          | AND -> (Concrete "Bool", Concrete "Bool")
-          | OR  -> (Concrete "Bool", Concrete "Bool")
-          | EQ  -> (nextTypVar last, Concrete "Bool")
-          | LT  -> (nextTypVar last, Concrete "Bool")
-          | LTE -> (nextTypVar last, Concrete "Bool")
-          | GT  -> (nextTypVar last, Concrete "Bool")
-          | GTE -> (nextTypVar last, Concrete "Bool")) in
-          let (returnT, subR) = unification returnT t in
-          let typEnvNew = applyte subR typEnv in
+         let (commonT, returnT) = (match b with
+         | ADD -> (Concrete "Int", Concrete "Int")
+         | FADD -> (Concrete "Float", Concrete "Float")
+         | SUB -> (Concrete "Int", Concrete "Int")
+         | FSUB -> (Concrete "Float", Concrete "Float")
+         | MLT -> (Concrete "Int", Concrete "Int")
+         | FMLT -> (Concrete "Float", Concrete "Float")
+         | DIV -> (Concrete "Int", Concrete "Int")
+         | FDIV -> (Concrete "Float", Concrete "Float")
+         | MOD -> (Concrete "Int", Concrete "Int")
+         | FMOD -> (Concrete "Float", Concrete "Float")
+         | AND -> (Concrete "Bool", Concrete "Bool")
+         | OR  -> (Concrete "Bool", Concrete "Bool")
+         | EQ  -> (nextTypVar last, Concrete "Bool")
+         | LT  -> (nextTypVar last, Concrete "Bool")
+         | LTE -> (nextTypVar last, Concrete "Bool")
+         | GT  -> (nextTypVar last, Concrete "Bool")
+         | GTE -> (nextTypVar last, Concrete "Bool")) in
+         let (returnT, subR) = unification returnT t in
+         let typEnvNew = applyte subR typEnv in
 
-          let { tp    = te;
-                sexpr = se;
-                sub   = sube; } = check e typEnvNew in
-          let typEnvNew = applyte sube typEnvNew in
-          let (tU, subU) = unification te commonT in
-          let typEnvNew = applyte subU typEnvNew in
-          let sub = compose (compose subR sube) subU in
+         let { tp    = te;
+               sexpr = se;
+               sub   = sube; } = check e typEnvNew in
+         let typEnvNew = applyte sube typEnvNew in
+         let (tU, subU) = unification te commonT in
+         let typEnvNew = applyte subU typEnvNew in
+         let sub = compose (compose subR sube) subU in
 
-          let { tp    = tf;
-                sexpr = sf;
-                sub   = subf; } = check f typEnvNew in
-          let (tU, subU) = unification tf tU in
-          let sub = compose (compose sub subf) subU in
+         let { tp    = tf;
+               sexpr = sf;
+               sub   = subf; } = check f typEnvNew in
+         let (tU, subU) = unification tf tU in
+         let sub = compose (compose sub subf) subU in
 
-          { tp    = returnT;
-            sexpr = (returnT, SBinop(b, se, sf));
-            sub   = sub;
-          }
+         { tp    = returnT;
+           sexpr = (returnT, SBinop(b, se, sf));
+           sub   = sub;
+         }
 (*---------------------------------------------------------------------------*)  
   | Hint(LCons(e, f), t) ->
-          let { tp = te;
-                sexpr = se;
-                sub = sube; } = check e typEnv in
-          let { tp = tf;
-                sexpr = sf;
-                sub = subf; } = check f typEnv in
-          let (tpl, subl) = unification (ListTyp te) tf in
-          let (tph, subh) = unification tpl t in
-          { tp = tph;
-            sexpr = (te, SLCons(se, sf));
-            sub = subh;
-          }
+         let { tp = te;
+               sexpr = se;
+               sub = sube; } = check e typEnv in
+         let { tp = tf;
+               sexpr = sf;
+               sub = subf; } = check f typEnv in
+         let (tpl, subl) = unification (ListTyp te) tf in
+         let (tph, subh) = unification tpl t in
+         { tp = tph;
+           sexpr = (te, SLCons(se, sf));
+           sub = subh;
+         }
 (*---------------------------------------------------------------------------*)  
   | Hint(LLen(e), t) ->
-          let { tp = te;
-                sexpr = se;
-                sub = sube; } = check e typEnv in
-          let (returnT, subR) = unification (Concrete "Int") t in
-          let (tpl, subl) = unification (ListTyp (nextTypVar last)) te in
-          { tp = returnT;
-            sexpr = (returnT, SLLen(se));
-            sub = compose subR subl;
-          }
+         let { tp = te;
+               sexpr = se;
+               sub = sube; } = check e typEnv in
+         let (returnT, subR) = unification (Concrete "Int") t in
+         let (tpl, subl) = unification (ListTyp (nextTypVar last)) te in
+         { tp = returnT;
+           sexpr = (returnT, SLLen(se));
+           sub = compose subR subl;
+         }
 (*---------------------------------------------------------------------------*)  
   | Hint(Unop(b, e), t)     ->
-          let (commonT, returnT) = (match b with
-          | NOT -> (Concrete "Bool", Concrete "Bool")) in
-          let (returnT, subR) = unification returnT t in
-          let typEnvNew = applyte subR typEnv in
+         let (commonT, returnT) = (match b with
+         | NOT -> (Concrete "Bool", Concrete "Bool")) in
+         let (returnT, subR) = unification returnT t in
+         let typEnvNew = applyte subR typEnv in
           
-          let { tp    = te;
-                sexpr = se;
-                sub   = sube; } = check e typEnvNew in
-          let (tU, subU) = unification te commonT in
-          let sub = compose (compose subR sube) subU in
+         let { tp    = te;
+               sexpr = se;
+               sub   = sube; } = check e typEnvNew in
+         let (tU, subU) = unification te commonT in
+         let sub = compose (compose subR sube) subU in
 
-          { tp    = returnT;
-            sexpr = (returnT, SUnop(b, se));
-            sub   = sub;
-          }
+         { tp    = returnT;
+           sexpr = (returnT, SUnop(b, se));
+           sub   = sub;
+         }
 (*---------------------------------------------------------------------------*)  
   | Hint(If(c, t, e), tp)     ->
-          (* it is essential to NOT evaluate both branches prematurely;
-             this can lead to infinite runs on branches that are actually
-             never executed; for this reason, the two expressions within
-             the if are wrapped in lambdas; when a branch is entered, that
-             lambda is executed; this behaviour is sort-of thunk-like 
-           *)
-          let tp = ArrowTyp(nextTypVar last, tp) in
-          let t = NoHint(Lambda (LVar "res", t)) in
-          let e = NoHint(Lambda (LVar "res", e)) in
-          let { tp    = tc;
-                sexpr = sc;
-                sub   = subc; } = check c typEnv in
-          let typEnvNew = applyte subc typEnv in
-          let (tU, subU) = unification tc (Concrete "Bool") in
-          let typEnvNew = applyte subU typEnvNew in
-          let sub = compose subc subU in
-          let { tp    = tt;
-                sexpr = st;
-                sub   = subt; } = check t typEnvNew in
-          let typEnvNew = applyte subt typEnvNew in
-          let (tU, subU) = unification tt tp in
-          let typEnvNew = applyte subU typEnvNew in
-          let sub = compose (compose sub subt) subU in
-          let { tp    = te;
-                sexpr = se;
-                sub   = sube; } = check e typEnvNew in
-          let (tU, subU) = unification (apply sube tU) te in
-          let sub = compose (compose sub sube) subU in
+         (* it is essential to NOT evaluate both branches prematurely;
+            this can lead to infinite runs on branches that are actually
+            never executed; for this reason, the two expressions within
+            the if are wrapped in lambdas; when a branch is entered, that
+            lambda is executed; this behaviour is sort-of thunk-like 
+          *)
+         let tp = ArrowTyp(nextTypVar last, tp) in
+         let t = NoHint(Lambda (LVar "res", t)) in
+         let e = NoHint(Lambda (LVar "res", e)) in
+         let { tp    = tc;
+               sexpr = sc;
+               sub   = subc; } = check c typEnv in
+         let typEnvNew = applyte subc typEnv in
+         let (tU, subU) = unification tc (Concrete "Bool") in
+         let typEnvNew = applyte subU typEnvNew in
+         let sub = compose subc subU in
+         let { tp    = tt;
+               sexpr = st;
+               sub   = subt; } = check t typEnvNew in
+         let typEnvNew = applyte subt typEnvNew in
+         let (tU, subU) = unification tt tp in
+         let typEnvNew = applyte subU typEnvNew in
+         let sub = compose (compose sub subt) subU in
+         let { tp    = te;
+               sexpr = se;
+               sub   = sube; } = check e typEnvNew in
+         let (tU, subU) = unification (apply sube tU) te in
+         let sub = compose (compose sub sube) subU in
 
-          let tp = 
-              (match tU with
-               | ArrowTyp(_, tp) -> tp
-               | _ -> assert false)
-          in
-          { tp    = tp;
-            sexpr = (tp, SIf(sc, st, se));
-            sub   = sub;
-          }
+         let tp = 
+             (match tU with
+              | ArrowTyp(_, tp) -> tp
+              | _ -> assert false)
+         in
+         { tp    = tp;
+           sexpr = (tp, SIf(sc, st, se));
+           sub   = sub;
+         }
 (*---------------------------------------------------------------------------*)  
   | Hint(UnitLit, t)          ->
-          let (tp, sub) = unification Unit t in
-          { tp    = tp;
-            sexpr = (tp, SUnitLit);
-            sub   = sub;
-          }          
+         let (tp, sub) = unification Unit t in
+         { tp    = tp;
+           sexpr = (tp, SUnitLit);
+           sub   = sub;
+         }          
 (*---------------------------------------------------------------------------*)  
   | Hint(IntLit (i), t)          ->
-          let (tp, sub) = unification (Concrete "Int") t in
-          { tp    = tp;
-            sexpr = (tp, SIntLit i);
-            sub   = sub;
-          }          
+         let (tp, sub) = unification (Concrete "Int") t in
+         { tp    = tp;
+           sexpr = (tp, SIntLit i);
+           sub   = sub;
+         }          
 (*---------------------------------------------------------------------------*)  
   | Hint(CharLit (i), t)          ->
-          let (tp, sub) = unification (Concrete "Char") t in
-          { tp    = tp;
-            sexpr = (tp, SCharLit i);
-            sub   = sub;
-          }          
+         let (tp, sub) = unification (Concrete "Char") t in
+         { tp    = tp;
+           sexpr = (tp, SCharLit i);
+           sub   = sub;
+         }          
 (*---------------------------------------------------------------------------*)  
   | Hint(BoolLit (b), t)         ->
-          let (tp, sub) = unification (Concrete "Bool") t in
-          { tp    = tp;
-            sexpr = (tp, SBoolLit b);
-            sub   = sub;
-          }
+         let (tp, sub) = unification (Concrete "Bool") t in
+         { tp    = tp;
+           sexpr = (tp, SBoolLit b);
+           sub   = sub;
+         }
 (*---------------------------------------------------------------------------*)  
   | Hint(FloatLit (f), t)         ->
-    let (tp, sub) = unification (Concrete "Float") t in
-    { tp    = tp;
-      sexpr = (tp, SFloatLit f);
-      sub   = sub;
-    }
+         let (tp, sub) = unification (Concrete "Float") t in
+         { tp    = tp;
+           sexpr = (tp, SFloatLit f);
+           sub   = sub;
+         }
 (*---------------------------------------------------------------------------*)  
   | Hint(Lambda (LVar(v), e), tp) -> 
-          let tv = nextTypVar last in
-          let typEnvNew = M.add v (Scheme([], tv)) typEnv in
+         let tv = nextTypVar last in
+         let typEnvNew = M.add v (Scheme([], tv)) typEnv in
 
-          let { tp    = bodyTyp; 
-                sexpr = bsexpr; 
-                sub   = sub1; } = check e typEnvNew in
-          let argTyp = apply sub1 tv in
+         let { tp    = bodyTyp; 
+               sexpr = bsexpr; 
+               sub   = sub1; } = check e typEnvNew in
+         let argTyp = apply sub1 tv in
 
-          let funcTyp, sub2 = unification (ArrowTyp(argTyp, bodyTyp)) tp in
-          let sub = compose sub1 sub2 in
+         let funcTyp, sub2 = unification (ArrowTyp(argTyp, bodyTyp)) tp in
+         let sub = compose sub1 sub2 in
 
-          { tp    = funcTyp;
-            sexpr = (funcTyp, SLambda (LVar(v), bsexpr));
-            sub   = sub;
-          } 
+         { tp    = funcTyp;
+           sexpr = (funcTyp, SLambda (LVar(v), bsexpr));
+           sub   = sub;
+         } 
 (*---------------------------------------------------------------------------*)  
   | Hint(Call (f, arg), t)      -> 
-          let retTyp = t in
-          let { tp    = funcTypInit; 
-                sexpr = fsexpr; 
-                sub = sub1; } = check f typEnv in 
-          let typEnvNew = applyte sub1 typEnv in
-          let { tp    = argTyp; 
-                sexpr = asexpr; 
-                sub = sub2; } = check arg typEnvNew in
-          let funcTypSub = apply sub2 funcTypInit in
-          let funcTyp = ArrowTyp(argTyp, retTyp) in (* test 6 error? *)
-          let _, sub3 = unification funcTypSub funcTyp in
-          let sub = compose (compose sub1 sub2) sub3 in
-          let tp = apply sub retTyp in 
+         let retTyp = t in
+         let { tp    = funcTypInit; 
+               sexpr = fsexpr; 
+               sub = sub1; } = check f typEnv in 
+         let typEnvNew = applyte sub1 typEnv in
+         let { tp    = argTyp; 
+               sexpr = asexpr; 
+               sub = sub2; } = check arg typEnvNew in
+         let funcTypSub = apply sub2 funcTypInit in
+         let funcTyp = ArrowTyp(argTyp, retTyp) in (* test 6 error? *)
+         let _, sub3 = unification funcTypSub funcTyp in
+         let sub = compose (compose sub1 sub2) sub3 in
+         let tp = apply sub retTyp in 
 
-          { tp    = tp;
-            sexpr = (tp, SCall (fsexpr, asexpr));
-            sub   = sub;
-          }
+         { tp    = tp;
+           sexpr = (tp, SCall (fsexpr, asexpr));
+           sub   = sub;
+         }
 (*---------------------------------------------------------------------------*)  
   | Hint(Let (Binding(LVar(v), e, false), f), t) ->
-          (* non-recursive let-bindings *)
+         (* non-recursive let-bindings *)
 
-          (* let bindings cannot be treated as lambda abstractions if we
-             want to obtain let polymorphism; for this reason, they are
-             treated separately here; however, after the type inference
-             and checking are complete, the C code treats the let as a
-             regular lambda abstraction *)
+         (* let bindings cannot be treated as lambda abstractions if we
+            want to obtain let polymorphism; for this reason, they are
+            treated separately here; however, after the type inference
+            and checking are complete, the C code treats the let as a
+            regular lambda abstraction *)
 
-          (* evaluate the assigned type, unify it with the type hint and
-             finally generalize; it is important to unify before generalizing
-             since type hints are monomorphic *)
-          let { tp    = assnTyp; 
-                sexpr = esexpr; 
-                sub = sub1; } = check e typEnv in
-          let typEnvNew = applyte sub1 typEnv in
-          let (assnTypUni, sub2) = unification t assnTyp in
-          let assnTypGen = generalize assnTypUni typEnvNew "" in
+         (* evaluate the assigned type, unify it with the type hint and
+            finally generalize; it is important to unify before generalizing
+            since type hints are monomorphic *)
+         let { tp    = assnTyp; 
+               sexpr = esexpr; 
+               sub = sub1; } = check e typEnv in
+         let typEnvNew = applyte sub1 typEnv in
+         let (assnTypUni, sub2) = unification t assnTyp in
+         let assnTypGen = generalize assnTypUni typEnvNew "" in
 
-          (* add the generalized polymorphic type to the type environment
-             and evaluate the resulting type *)
-          let typEnvNew = M.add v assnTypGen typEnv in
-          let sub = compose sub1 sub2 in
-          let typEnvNew = applyte sub typEnvNew in
-          let { tp    = funcTyp; 
-                sexpr = fsexpr; 
-                sub   = sub3; } = check f typEnvNew in
-              
-          { tp    = funcTyp;
-            sexpr = (funcTyp, SLet (SBinding (LVar(v), esexpr, false), fsexpr));
-            sub   = compose sub sub3;
-          }
+         (* add the generalized polymorphic type to the type environment
+            and evaluate the resulting type *)
+         let typEnvNew = M.add v assnTypGen typEnv in
+         let sub = compose sub1 sub2 in
+         let typEnvNew = applyte sub typEnvNew in
+         let { tp    = funcTyp; 
+               sexpr = fsexpr; 
+               sub   = sub3; } = check f typEnvNew in
+             
+         { tp    = funcTyp;
+           sexpr = (funcTyp, SLet (SBinding (LVar(v), esexpr, false), fsexpr));
+           sub   = compose sub sub3;
+         }
 (*---------------------------------------------------------------------------*)  
   | Hint(Let (Binding(LVar(v), e, true), f), t) ->
         (* a let rec equal to a non-lambda expression cannot possibly
@@ -412,29 +412,29 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
         } 
 (*---------------------------------------------------------------------------*)  
     | Hint(SItoFP(expr), t) ->       
-      let (tpRet, sub1) = unification (Concrete "Float") t in
-      let typEnvNew = applyte sub1 typEnv in
-      let { tp = xtp;
-            sexpr = xexp;
-            sub = xsub; } = check expr typEnvNew in
-      let (_, sub2) = unification xtp (Concrete "Int") in
-      let sub = compose sub1 sub2 in
-
-      { tp = tpRet;
-        sexpr = (tpRet, SSItoFP(xexp));
-        sub = sub;
-      }
+        let (tpRet, sub1) = unification (Concrete "Float") t in
+        let typEnvNew = applyte sub1 typEnv in
+        let { tp = xtp;
+              sexpr = xexp;
+              sub = xsub; } = check expr typEnvNew in
+        let (_, sub2) = unification xtp (Concrete "Int") in
+        let sub = compose sub1 sub2 in
+  
+        { tp = tpRet;
+          sexpr = (tpRet, SSItoFP(xexp));
+          sub = sub;
+        }
 (*---------------------------------------------------------------------------*)  
     | Hint(FPtoSI(expr), t) -> 
-      let (tpRet, sub1) = unification (Concrete "Int") t in
-      let typEnvNew = applyte sub1 typEnv in
-      let { tp = xtp;
-            sexpr = xexp;
-            sub = xsub; } = check expr typEnvNew in
-      let (_, sub2) = unification xtp (Concrete "Float") in
-      let sub = compose sub1 sub2 in
+        let (tpRet, sub1) = unification (Concrete "Int") t in
+        let typEnvNew = applyte sub1 typEnv in
+        let { tp = xtp;
+              sexpr = xexp;
+              sub = xsub; } = check expr typEnvNew in
+        let (_, sub2) = unification xtp (Concrete "Float") in
+        let sub = compose sub1 sub2 in
 
-      { tp = tpRet;
-        sexpr = (tpRet, SFPtoSI(xexp));
-        sub = sub;
-      }
+        { tp = tpRet;
+          sexpr = (tpRet, SFPtoSI(xexp));
+          sub = sub;
+        }

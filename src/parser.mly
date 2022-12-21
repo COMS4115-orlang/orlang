@@ -182,7 +182,8 @@ expr:
 | expr GTE   expr             { NoHint(Binop(GTE, $1, $3)) }
 | BNOT  expr                  { NoHint(Unop(NOT, $2)) }
 | IF expr THEN expr ELSE expr { NoHint(If($2, $4, $6)) }
-| MATCH expr WITH patternMatrix SEMICOLON { patternsToIfElse(PatternMatch($2, $4)) }
+| MATCH expr WITH patternMatrix SEMICOLON 
+                              { patternsToIfElse(PatternMatch($2, $4)) }
 | PRINT expr                  { NoHint(Print($2)) }
 | ORD expr                    { NoHint(Ord($2)) }
 | CHR expr                    { NoHint(Chr($2)) }
@@ -190,12 +191,12 @@ expr:
 | FPTOSI expr                 { NoHint(FPtoSI($2)) }
 
 multVars:
-| VARIABLE COMMA multVars { (LVar($1))::($3) }
-| VARIABLE                { [LVar($1)] }
+| VARIABLE COMMA multVars     { (LVar($1))::($3) }
+| VARIABLE                    { [LVar($1)] }
 
 consVars:
-| VARIABLE DCOLON consVars { (LVar($1))::($3) }
-| VARIABLE                 { [LVar($1)] }
+| VARIABLE DCOLON consVars    { (LVar($1))::($3) }
+| VARIABLE                    { [LVar($1)] }
 
 lst:
 |                             { [] }
@@ -203,9 +204,10 @@ lst:
 | expr COMMA lst              { ($1)::($3) }
 
 patternMatrix: 
-| GUARD expr DARROW expr               { [PatternRow(Pattern($2), $4)] }
-| GUARD OTHERWISE DARROW expr         { [PatternRow(PatDefault, $4)] }
-| GUARD expr DARROW expr patternMatrix { PatternRow(Pattern($2), $4)::($5) }
+| GUARD expr DARROW expr      { [PatternRow(Pattern($2), $4)] }
+| GUARD OTHERWISE DARROW expr { [PatternRow(PatDefault, $4)] }
+| GUARD expr DARROW expr patternMatrix 
+                              { PatternRow(Pattern($2), $4)::($5) }
 
 lambda:
 | VARIABLE ARROW expr         { NoHint(Lambda(LVar($1), $3)) }

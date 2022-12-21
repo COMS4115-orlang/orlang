@@ -7,17 +7,15 @@ let last = ref 0
 let lastClass = ref 0
 let lastTemp = ref 0
 let rec digits (x : int) : int list = 
-  if x < 10 then [x]
-  else (x mod 10) :: (digits (x / 10))
+    if x < 10 then [x]
+    else (x mod 10) :: (digits (x / 10))
 
 (* generates the next unique string given the previously generated one;
    used to generate mangled names and unique type variables during HM *)
 let nextEntry (x : int ref) : string = 
-(
     x := !x + 1;
     let l = List.map Char.chr (List.map ((+) (Char.code 'a')) (digits !x)) in
     String.of_seq (List.to_seq l)
-)
 
 (* generates the next unique type variable in lexicographical order *)
 let nextTypVar (x : int ref) : typ =
