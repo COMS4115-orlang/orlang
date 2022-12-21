@@ -767,13 +767,7 @@ and fix (name : string) arg lambdaName typEnv body =
                     (* assign the argument to the member of the struct *)
                     ignore(llvmAssignMember allocd_struct p currIndex builder);
                 ) captureParam) in
-    (*
-    (* NULL assignment *)
-    let argIndex = 1 + find arg capture in
-    let nullvar = L.build_alloca voidptr "_nullvar" builder in
-    let _ = L.build_store (L.const_null voidptr) nullvar builder in
-    let _ = llvmAssignMember allocd_struct nullvar argIndex builder in
-    *)
+
     (* insert body of the call function *)
     let (e, te) = body in
     let elvar = check e te allocd_struct builder in
