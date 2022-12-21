@@ -10,10 +10,6 @@ type evalResult =
     sexpr : sExpr;
     sub : substitution;
   }
-type codegenResult = 
-  { var  : string;
-    lvar : L.llvalue;
-  }
 
 (* apply a substitution to a type *)
 let rec apply (sub : substitution) (tp : typ) : typ = 
