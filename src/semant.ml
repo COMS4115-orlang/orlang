@@ -36,21 +36,23 @@ let rec check (expr : hExpr) (typEnv : typeEnvironm) : evalResult =
            sub = M.empty;
          }
        else
-         let (typEnv, sub1, tacc, sacc) = List.fold_right (fun e (typEnv, sub, acc, sacc) -> 
-                                                            let { tp = tp;
-                                                                  sexpr = sexpr;
-                                                                  sub = sub2; } = check e typEnv in
-                                                            let typEnv = applyte sub2 typEnv in
-                                                            let sub = compose sub sub2 in
-                                                            (typEnv, sub, tp :: acc, sexpr :: sacc)) 
-                                                          lst
-                                                          (typEnv, M.empty, [], []) in
-         let (commontp, sub2) = List.fold_right (fun tp (commontp, sub) ->
-                                                  let (tu, sub2) = unification tp commontp in
-                                                  let sub = compose sub sub2 in
-                                                  (tu, sub))
-                                                tacc
-                                                (nextTypVar last, M.empty) in
+         let (typEnv, sub1, tacc, sacc) = List.fold_right 
+                                            (fun e (typEnv, sub, acc, sacc) -> 
+                                               let { tp = tp;
+                                                     sexpr = sexpr;
+                                                     sub = sub2; } = check e typEnv in
+                                               let typEnv = applyte sub2 typEnv in
+                                               let sub = compose sub sub2 in
+                                               (typEnv, sub, tp :: acc, sexpr :: sacc)) 
+                                            lst
+                                            (typEnv, M.empty, [], []) in
+         let (commontp, sub2) = List.fold_right 
+                                  (fun tp (commontp, sub) ->
+                                     let (tu, sub2) = unification tp commontp in
+                                     let sub = compose sub sub2 in
+                                     (tu, sub))
+                                  tacc
+                                  (nextTypVar last, M.empty) in
          let (tu, sub3) = unification t (ListTyp commontp) in
          let sub = compose (compose sub1 sub2) sub3 in
 
