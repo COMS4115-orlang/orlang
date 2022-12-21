@@ -1,1 +1,3 @@
 # orlang
+
+See `Lambda` directory.
