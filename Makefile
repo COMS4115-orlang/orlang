@@ -1,5 +1,5 @@
 build:
-	ocamlbuild -pkgs llvm orlang.native -yaccflag -v
+	ocamlbuild -pkgs llvm orlang.native -yaccflag -v -I src
 
 .PHONY : all_tests
 all_tests: build
